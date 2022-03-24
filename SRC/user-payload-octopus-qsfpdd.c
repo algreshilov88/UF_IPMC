@@ -57,39 +57,48 @@ static int power_up_done = 0;
 void user_module_payload_on( void )
 {
 	unsigned int payload_read;
-
-	lock(1);
+	power_up_done=0;
+	lock(2);
 	payload_read = reg_read(devmem_ptr, qbv_on_off);
 	payload_read |= 0x20;
 	reg_write(devmem_ptr, qbv_on_off, payload_read);
-	//printf("Octopus done\n");
 	payload_timeout_init = lbolt;
-	power_up_octopus(i2c_fd_snsr[1]);
-	power_up_qsfpdd_module(i2c_fd_snsr[1]);
-    logger("PAYLOAD", "On");
-	power_up_done = 1;
-    printf("Optics Detected = %d\n",detect_optics(i2c_fd_snsr[1]));
-	//logger("PAYLOAD", "On, lbolt = %llu, payload = %llu",lbolt,payload_timeout_init);
-	printf("lbolt = %llu, payload = %llu\n",lbolt,payload_timeout_init);
-
-    unlock(1);
-
+	//disable latches for both boards
+	while (i2c_write(i2c_fd_snsr[OCTOPUS_I2C_BUS],MACHXO2_ADDR,10,1)!=0)
+	  ;
+	i2c_write_octopus_bus(i2c_fd_snsr[OCTOPUS_I2C_BUS],OPTICAL_BUS,OPTICAL_ADDR, 8, 0x1,0);
+	//power them down
+	power_down_octopus(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
+	power_down_qsfpdd_module(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
+	//configure sensors
+	configure_octopus(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
+	configure_qsfpdd_module(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
+	//power_up
+	u8 octopus_on;
+	u8 optical_on;
+	octopus_on=power_up_octopus(i2c_fd_snsr[OCTOPUS_I2C_BUS],100);
+	optical_on=power_up_qsfpdd_module(i2c_fd_snsr[OCTOPUS_I2C_BUS],100);
+	power_up_done=octopus_on&optical_on;
+	if(!power_up_done) {
+	  power_down_octopus(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
+	  power_down_qsfpdd_module(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
+	}
+	unlock(2);
 }
 
 void
 user_module_payload_off( void )
 {
-  lock(1);
+  lock(2);
   unsigned int payload_read;
   payload_read = reg_read(devmem_ptr, qbv_on_off);
   payload_read &= ~0x20;
-  power_down_octopus(i2c_fd_snsr[1]);
-  power_down_qsfpdd_module(i2c_fd_snsr[1]);
+  power_down_octopus(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
+  power_down_qsfpdd_module(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
   power_up_done = 0;
   reg_write(devmem_ptr, qbv_on_off, payload_read);
   logger("PAYLOAD", "Off");
-  unlock(1);
-
+  unlock(2);
 }
 
 void

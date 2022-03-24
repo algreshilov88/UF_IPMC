@@ -91,5 +91,7 @@ void get_sensor_threshold( IPMI_PKT *pkt );
 void get_sensor_hysteresis( IPMI_PKT *pkt );
 void set_sensor_threshold ( IPMI_PKT *pkt );
 void set_sensor_hysteresis ( IPMI_PKT *pkt );
+void rearm_sensor_events ( IPMI_PKT *pkt );
+void get_sensor_event_status ( IPMI_PKT *pkt );
 int  mgmt_add( MGMT_CTRL_DEV_LOCATOR_RECORD *sdr );
 int  sensor_add( FULL_SENSOR_RECORD *sdr, SENSOR_DATA *sensor_data );

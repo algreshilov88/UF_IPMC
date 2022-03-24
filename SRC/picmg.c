@@ -48,12 +48,16 @@
 #define SHORT_BLINK_ON	1 /* in 100 ms */
 #define SHORT_BLINK_OFF	9 /* in 100 ms */
 
+#define qbv_on_off		0x1220000
+#define ha_offset			0x1220008
+
 FRU_INFO fru[MAX_FRU_DEV_ID + 1];
 FRU_FAN_INFO fru_fan[MAX_FRU_DEV_ID + 1];
 PICMG_ADDRESS_INFO picmg_address_info_table[NUM_PICMG_ADDRESS_INFO_TABLE_ENTRIES] = { { 0, 0, 0, 0, 0 } };
 uchar controller_fru_dev_id = 0; // fru dev id for the BMC
 extern SENSOR_DATA sd[];
 extern unsigned int fru_ipmb_a_b_event_set;
+extern unsigned int m4_power_count;
 
 #define NUM_IPMB_SENSORS			1
 struct {
@@ -528,6 +532,11 @@ picmg_m1_state( unsigned fru_id )
 
 	//user_module_payload_off();
 
+	if (((reg_read(devmem_ptr, qbv_on_off)>>5)&0x01) == 1)
+	{
+		user_module_payload_off();
+	}
+
 	//usleep(3000000);
 	//picmg_m2_state( 0 );
 
@@ -835,6 +844,10 @@ picmg_m4_state( unsigned fru_id )
 		logger("Hot Swap Event Message", "M5 -> M4");
 	}
 
+	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE ) {
+		logger("Hot Swap Event Message", "M7 -> M4");
+	}
+
 //	fru[fru_id].state = FRU_STATE_M4_ACTIVE;
 
 	/* architecture dependent - adjust power level */
@@ -879,11 +892,21 @@ picmg_m4_state( unsigned fru_id )
 		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M5_DEACTIVATION_REQUEST;
 	}
 
+	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE &&
+			fru[fru_id].old_state == FRU_STATE_M4_ACTIVE ) {
+		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
+	}
+
 	msg.evt_data3 = controller_fru_dev_id;
 
 	fru[fru_id].state = FRU_STATE_M4_ACTIVE;
 
 	//user_module_payload_on();
+
+	if (((reg_read(devmem_ptr, qbv_on_off)>>5)&0x01) == 0)
+	{
+		user_module_payload_on();
+	}
 
 	/* dispatch message */
 	ipmi_send_event_req( ( unsigned char * )&msg, sizeof( FRU_HOT_SWAP_EVENT_MSG_REQ ), 0 );
@@ -1614,12 +1637,14 @@ picmg_set_ipmb_state( IPMI_PKT *pkt )
 
 	if ( req->ipmb_a_state == 0 )
 	{
+		reg_write(devmem_ptr, qbv_on_off, 1);
 		sd[2].ipmb_a_disabled_ipmb_b_enabled = 1;
 		fru_ipmb_a_b_event_set = 1;
 	}
 
 	if ( req->ipmb_b_state == 0 )
 	{
+		reg_write(devmem_ptr, qbv_on_off, 2);
 		sd[2].ipmb_a_enabled_ipmb_b_disabled = 1;
 		fru_ipmb_a_b_event_set = 1;
 	}
