@@ -148,12 +148,12 @@ module_get_i2c_address( int address_type )
          else {printf("/dev/watchdog0 opened\n");}
 	 
 	 /* set timeout */
-	 if (ioctl(fd, WDIOC_SETTIMEOUT, &timeout) < 0) {
+	 if (ioctl(wdt_fd, WDIOC_SETTIMEOUT, &timeout) < 0) {
            	logger("ioctl(WDIOC_SETTIMEOUT) in watchdog_init()", strerror(errno));
          }
 	 
 	 /* check timeout */
-	 if (ioctl(fd, WDIOC_GETTIMEOUT, &timeout) < 0) {
+	 if (ioctl(wdt_fd, WDIOC_GETTIMEOUT, &timeout) < 0) {
            	logger("ioctl(WDIOC_GETTIMEOUT) in watchdog_init()", strerror(errno));
          }
 	 else {printf("Watchdog timeout value: %d\n", timeout);}
