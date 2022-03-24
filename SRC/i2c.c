@@ -443,7 +443,7 @@ i2c_master_write_1( IPMI_WS *ws )
 
 		reg_write(devmem_ptr, set_MS, 2);
 
-    if (ioctl(i2c_fd_1, I2C_RDWR, &msgset) < 0)
+    if (ioctl(i2c_fd, I2C_RDWR, &msgset) < 0)
     {
 				reg_write(devmem_ptr, set_MS, 0);
         perror("ioctl(I2C_RDWR) in i2c_master_write_1()");
