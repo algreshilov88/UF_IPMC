@@ -57,7 +57,6 @@ PICMG_ADDRESS_INFO picmg_address_info_table[NUM_PICMG_ADDRESS_INFO_TABLE_ENTRIES
 uchar controller_fru_dev_id = 0; // fru dev id for the BMC
 extern SENSOR_DATA sd[];
 extern unsigned int fru_ipmb_a_b_event_set;
-extern unsigned int m4_power_count;
 
 #define NUM_IPMB_SENSORS			1
 struct {
