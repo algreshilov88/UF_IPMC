@@ -137,7 +137,7 @@ module_get_i2c_address( int address_type )
 
 	 /* set new timeout value 1000s
 	 Note the value should be within [5, 1000] */
-	 int timeout = 1000;
+	 int timeout = 500;
 	 
          /* open WDT0 device (WDT0 enables itself automatically) */
          wdt_fd = open("/dev/watchdog0", O_RDWR);
@@ -151,12 +151,14 @@ module_get_i2c_address( int address_type )
 	 if (ioctl(wdt_fd, WDIOC_SETTIMEOUT, &timeout) < 0) {
            	logger("ioctl(WDIOC_SETTIMEOUT) in watchdog_init()", strerror(errno));
          }
+	 else {printf("New watchdog timeout value set to %d seconds\n", timeout);}
+	 
 	 
 	 /* check timeout */
 	 if (ioctl(wdt_fd, WDIOC_GETTIMEOUT, &timeout) < 0) {
            	logger("ioctl(WDIOC_GETTIMEOUT) in watchdog_init()", strerror(errno));
          }
-	 else {printf("Watchdog timeout value: %d\n", timeout);}
+	 else {printf("Checked watchdog timeout value: %d seconds\n", timeout);}
  }
 
 void
