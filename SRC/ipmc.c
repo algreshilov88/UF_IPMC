@@ -135,8 +135,8 @@ module_get_i2c_address( int address_type )
          // initialize the Watchdog Timer
          // ====================================================================
 
-	 /* set new timeout value 1000s
-	 Note the value should be within [5, 1000] */
+	 /* set new timeout value 500s
+	 Note the value should be within [10, 500] */
 	 int timeout = 500;
 	 
          /* open WDT0 device (WDT0 enables itself automatically) */
