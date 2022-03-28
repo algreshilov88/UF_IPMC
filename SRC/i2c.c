@@ -206,8 +206,11 @@ i2c_slave_read_0( void )
     unsigned int reg = 0x00;
     unsigned int pkg_size;
     unsigned int i;
+		unsigned int ret;
 
-    reg_write(devmem_ptr, set_MS, 0);
+		ret = reg_read(devmem_ptr, set_MS);
+		ret &= ~0x01;
+    reg_write(devmem_ptr, set_MS, ret);
 
     dputstr( DBG_I2C | DBG_INOUT, "i2c_slave_read_0: ingress\n" );
     if( !( ws = ws_alloc() ) ) {
@@ -257,8 +260,11 @@ i2c_slave_read_1( void )
     unsigned int reg = 0x2000000;
     unsigned int pkg_size;
     unsigned int i;
+		unsigned int ret;
 
-    reg_write(devmem_ptr, set_MS, 0);
+		ret = reg_read(devmem_ptr, set_MS);
+		ret &= ~0x01;
+    reg_write(devmem_ptr, set_MS, ret);
 
     dputstr( DBG_I2C | DBG_INOUT, "i2c_slave_read_0: ingress\n" );
     if( !( ws = ws_alloc() ) ) {
@@ -311,6 +317,7 @@ i2c_master_write_0( IPMI_WS *ws )
 {
     long funcs;
     unsigned int i, n;
+		unsigned int ret;
 
     struct i2c_msg msgs[1];
     struct i2c_rdwr_ioctl_data msgset[1];
@@ -351,11 +358,16 @@ i2c_master_write_0( IPMI_WS *ws )
     msgset[0].msgs = msgs;
     msgset[0].nmsgs = 1;
 
-		reg_write(devmem_ptr, set_MS, 1);
+		ret = reg_read(devmem_ptr, set_MS);
+		ret |= 0x01;
+    reg_write(devmem_ptr, set_MS, ret);
 
     if (ioctl(i2c_fd, I2C_RDWR, &msgset) < 0)
     {
-				reg_write(devmem_ptr, set_MS, 0);
+				ret = reg_read(devmem_ptr, set_MS);
+				ret &= ~0x01;
+	    	reg_write(devmem_ptr, set_MS, ret);
+
         perror("ioctl(I2C_RDWR) in i2c_master_write_0()");
 
 				//logger("i2c-cadence master write error", strerror(errno));
@@ -380,7 +392,10 @@ i2c_master_write_0( IPMI_WS *ws )
 						i2c_master_write_1( ws );
 				//}
     } else {
-				reg_write(devmem_ptr, set_MS, 0);
+				ret = reg_read(devmem_ptr, set_MS);
+				ret &= ~0x01;
+				reg_write(devmem_ptr, set_MS, ret);
+
 				if (ws->pkt_out[0] == 0x14 && ws->pkt_out[4] == 0x00) {
 					logger("Event Message","Set Event Receiver(Events Rearming)");
 				}
@@ -401,6 +416,7 @@ i2c_master_write_1( IPMI_WS *ws )
 {
     long funcs;
     unsigned int i, n;
+		unsigned int ret;
 
     struct i2c_msg msgs[1];
     struct i2c_rdwr_ioctl_data msgset[1];
@@ -441,11 +457,16 @@ i2c_master_write_1( IPMI_WS *ws )
     msgset[0].msgs = msgs;
     msgset[0].nmsgs = 1;
 
-		reg_write(devmem_ptr, set_MS, 2);
+		ret = reg_read(devmem_ptr, set_MS);
+		ret |= 0x02;
+    reg_write(devmem_ptr, set_MS, ret);
 
     if (ioctl(i2c_fd, I2C_RDWR, &msgset) < 0)
     {
-				reg_write(devmem_ptr, set_MS, 0);
+				ret = reg_read(devmem_ptr, set_MS);
+				ret &= ~0x02;
+				reg_write(devmem_ptr, set_MS, ret);
+
         perror("ioctl(I2C_RDWR) in i2c_master_write_1()");
 
 				//logger("i2c-xilinx master write error", strerror(errno));
@@ -470,7 +491,10 @@ i2c_master_write_1( IPMI_WS *ws )
 						i2c_master_write_0( ws );
 				//}
     } else {
-				reg_write(devmem_ptr, set_MS, 0);
+				ret = reg_read(devmem_ptr, set_MS);
+				ret &= ~0x02;
+				reg_write(devmem_ptr, set_MS, ret);
+
 				if (ws->pkt_out[0] == 0x14 && ws->pkt_out[4] == 0x00) {
 					logger("Event message","Set Event Receiver(Events Rearming)");
 				}
