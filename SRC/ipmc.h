@@ -20,6 +20,9 @@
     You should have received a copy of the GNU General Public License
     along with UF_IPMC.  If not, see <https://www.gnu.org/licenses/>.
 */
+void sig_handler(int signo);
+void ipmb_buffers_enable( void );
+void ipmb_buffers_disable( void );
 void module_init( void );
 void module_cold_reset( unsigned char dev_id );
 void module_warm_reset( unsigned char dev_id );

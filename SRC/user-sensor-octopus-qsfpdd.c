@@ -51,6 +51,11 @@ extern SENSOR_DATA sd[];
 extern int optics_powered;
 
 /*==============================================================*/
+/* Local Function Prototypes					*/
+/*==============================================================*/
+void all_i2c_sensors_poll( unsigned char *arg );
+
+/*==============================================================*/
 /* USER SEMAPHORE INITIALIZATION				*/
 /*==============================================================*/
 void semaphore_initialize(void) {
@@ -68,6 +73,7 @@ void semaphore_initialize(void) {
 }
 
 void user_sensor_state_poll(void) {
+	all_i2c_sensors_poll( 0 );
 } // end of user_module_init() function
 
 
@@ -522,4 +528,14 @@ void read_sensor_optics(void) {
 				sd[sensor_N].current_state_mask = 0;
     }
     unlock(2);
+}
+
+void all_i2c_sensors_poll( unsigned char *arg ) {
+        unsigned char all_i2c_sensors_handle;
+
+        read_all_i2c_sensors();
+
+        // Re-start the timer
+        timer_add_callout_queue( (void *)&all_i2c_sensors_handle,
+                        5*SEC, all_i2c_sensors_poll, 0 ); /* 5 sec timeout */
 }

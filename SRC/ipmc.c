@@ -35,6 +35,7 @@
 #include "sensor.h"
 #include "toml.h"
 #include "logger.h"
+#include "semaphore.h"
 #include "user-payload.h"
 #include "user-sensor.h"
 #include <stdio.h>
@@ -42,6 +43,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
@@ -59,7 +61,7 @@ int wdt_fd;
 unsigned int hot_swap_handle_last_state;
 unsigned int fru_ipmb_a_b_last_state = 0x00;
 unsigned int fru_ipmb_a_b_init_state = 0x00;
-unsigned int fru_ipmb_a_b_event_set = 0x00;
+unsigned int fru_ipmb_a_b_event_set = 0x01;
 
 extern unsigned long long int lbolt;
 extern FRU_CACHE fru_inventory_cache[];
@@ -125,9 +127,82 @@ module_get_i2c_address( int address_type )
 	}
 }
 
+void sig_handler(int signo)
+{
+        if (signo == SIGABRT ||
+            signo == SIGQUIT ||
+            signo == SIGTERM ||
+            signo == SIGILL  ||
+            signo == SIGFPE  ||
+            signo == SIGINT  ||
+            signo == SIGSEGV)
+        {
+                ipmb_buffers_disable();
+                //reset_semaphore(ind);
+                exit(EXIT_SUCCESS);
+        }
+}
+
+
 /*==============================================================
  * INITIALIZATION
  *==============================================================*/
+void
+ipmb_buffers_enable( void )
+{
+       // ====================================================================
+       // Enable IPMB buffers
+       // ====================================================================
+
+       unsigned int ret;
+
+       ret = reg_read(devmem_ptr, qbv_on_off);
+       ret |= 0x03;
+       reg_write(devmem_ptr, qbv_on_off, ret);
+
+       if ((reg_read(devmem_ptr, qbv_on_off)&0x03) == 0)
+       {
+              reg_write(devmem_ptr, qbv_on_off, ret);
+       }
+
+       if ((reg_read(devmem_ptr, qbv_on_off)&0x03) == 0)
+       {
+                logger("ERROR", "IPMB buffers enable failed!");
+       }
+       else
+       {
+              logger("INFO", "IPMB buffers are enabled");
+       }
+}
+
+void
+ipmb_buffers_disable( void )
+{
+        // ====================================================================
+        // Enable IPMB buffers
+        // ====================================================================
+
+        unsigned int ret;
+
+        ret = reg_read(devmem_ptr, qbv_on_off);
+        ret &= ~0x03;
+        reg_write(devmem_ptr, qbv_on_off, ret);
+
+        if ((reg_read(devmem_ptr, qbv_on_off)&0x03) != 0)
+        {
+              reg_write(devmem_ptr, qbv_on_off, ret);
+        }
+
+        if ((reg_read(devmem_ptr, qbv_on_off)&0x03) != 0)
+        {
+              logger("ERROR", "IPMB buffers disable failed!");
+        }
+        else
+        {
+              logger("INFO", "IPMB buffers are disabled");
+        }
+}
+
  void
  watchdog_init( void )
  {
@@ -138,7 +213,7 @@ module_get_i2c_address( int address_type )
 	 /* set new timeout value 500s
 	 Note the value should be within [10, 500] */
 	 int timeout = 500;
-	 
+
          /* open WDT0 device (WDT0 enables itself automatically) */
          wdt_fd = open("/dev/watchdog0", O_RDWR);
          if(wdt_fd < 0) {
@@ -146,14 +221,14 @@ module_get_i2c_address( int address_type )
                  exit(EXIT_FAILURE);
          }
          else {printf("/dev/watchdog0 opened\n");}
-	 
+
 	 /* set timeout */
 	 if (ioctl(wdt_fd, WDIOC_SETTIMEOUT, &timeout) < 0) {
            	logger("ioctl(WDIOC_SETTIMEOUT) in watchdog_init()", strerror(errno));
          }
 	 else {printf("New watchdog timeout value set to %d seconds\n", timeout);}
-	 
-	 
+
+
 	 /* check timeout */
 	 if (ioctl(wdt_fd, WDIOC_GETTIMEOUT, &timeout) < 0) {
            	logger("ioctl(WDIOC_GETTIMEOUT) in watchdog_init()", strerror(errno));
@@ -1927,11 +2002,12 @@ read_ipmb_0_status( void )
 
 	unsigned int status_0;
 	unsigned int status_1;
+	unsigned int ret;
 
 	status_0 = (reg_read(devmem_ptr, ha_offset)>>8)&0x01;
 	status_1 = (reg_read(devmem_ptr, ha_offset)>>9)&0x01;
 
-	if ( fru_ipmb_a_b_event_set )
+	if ( !fru_ipmb_a_b_event_set )
 	{
 		if ( sd[2].ipmb_a_enabled_ipmb_b_disabled == 1 )
 		{
@@ -1944,8 +2020,6 @@ read_ipmb_0_status( void )
 			status_0 = 0;
 			status_1 = 1;
 		}
-
-		fru_ipmb_a_b_event_set = 0;
 	}
 
 	sd[2].std_ipmi_byte = 0xC0;
@@ -1953,21 +2027,21 @@ read_ipmb_0_status( void )
 	if (status_0)
 	{
 		sd[2].ipmb_a_local_status = 0;
-		sd[2].ipmb_a_override_state = 1;
+		sd[2].ipmb_a_override_state = fru_ipmb_a_b_event_set;
 	} else
 	{
 		sd[2].ipmb_a_local_status = 0x07;
-		sd[2].ipmb_a_override_state = 0;
+		sd[2].ipmb_a_override_state = fru_ipmb_a_b_event_set;
 	}
 
 	if (status_1)
 	{
 		sd[2].ipmb_b_local_status = 0;
-		sd[2].ipmb_b_override_state = 1;
+		sd[2].ipmb_b_override_state = fru_ipmb_a_b_event_set;
 	} else
 	{
 		sd[2].ipmb_b_local_status = 0x07;
-		sd[2].ipmb_b_override_state = 0;
+		sd[2].ipmb_b_override_state = fru_ipmb_a_b_event_set;
 	}
 
 	if (status_0)
@@ -2050,32 +2124,42 @@ read_ipmb_0_status( void )
 
 	if (sd[2].ipmb_a_enabled_ipmb_b_enabled && fru_ipmb_a_b_last_state == 1 && fru_ipmb_a_b_init_state == 1)
 	{
+		ret = reg_read(devmem_ptr, qbv_on_off);
+		ret |= 0x03;
+		reg_write(devmem_ptr, qbv_on_off, ret);
 		ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_IPMB_0_EVENT_MSG_REQ), 0);
-		reg_write(devmem_ptr, qbv_on_off, 0);
 	}
 
 	if (sd[2].ipmb_a_enabled_ipmb_b_disabled && fru_ipmb_a_b_last_state == 2 && fru_ipmb_a_b_init_state == 1)
 	{
+		ret = reg_read(devmem_ptr, qbv_on_off);
+		ret |= 0x01;
+		reg_write(devmem_ptr, qbv_on_off, ret);
 		ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_IPMB_0_EVENT_MSG_REQ), 0);
-		reg_write(devmem_ptr, qbv_on_off, 2);
 	}
 
 	if (sd[2].ipmb_a_disabled_ipmb_b_enabled && fru_ipmb_a_b_last_state == 3 && fru_ipmb_a_b_init_state == 1)
 	{
+		ret = reg_read(devmem_ptr, qbv_on_off);
+		ret |= 0x02;
+		reg_write(devmem_ptr, qbv_on_off, ret);
 		ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_IPMB_0_EVENT_MSG_REQ), 0);
-		reg_write(devmem_ptr, qbv_on_off, 1);
 	}
 
 	if (sd[2].ipmb_a_disabled_ipmb_b_disabled && fru_ipmb_a_b_last_state == 4 && fru_ipmb_a_b_init_state == 1)
 	{
+		ret = reg_read(devmem_ptr, qbv_on_off);
+		ret &= ~0x03;
+		reg_write(devmem_ptr, qbv_on_off, ret);
 		//ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_IPMB_0_EVENT_MSG_REQ), 0);
-		reg_write(devmem_ptr, qbv_on_off, 3);
 	}
 
 	sd[2].ipmb_a_enabled_ipmb_b_enabled = 0;
 	sd[2].ipmb_a_enabled_ipmb_b_disabled = 0;
 	sd[2].ipmb_a_disabled_ipmb_b_enabled = 0;
 	sd[2].ipmb_a_disabled_ipmb_b_disabled = 0;
+
+	fru_ipmb_a_b_event_set = 1;
 }
 
 void

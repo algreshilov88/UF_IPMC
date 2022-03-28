@@ -234,7 +234,7 @@ i2c_slave_read_0( void )
            	reg = reg + 0x004;
            	ws->pkt_in[i] = reg_read(devmem_ptr, reg);
 	   		ws->i2c_channel = 0;
-	   		printf("data_rcv_0 = 0x%x\n\r", (unsigned int) ws->pkt_in[i]);
+	   		//printf("data_rcv_0 = 0x%x\n\r", (unsigned int) ws->pkt_in[i]);
        	}
 
 				i2c_slave_complete( (void *)ws, 0 );
@@ -285,7 +285,7 @@ i2c_slave_read_1( void )
            	reg = reg + 0x004;
            	ws->pkt_in[i] = reg_read(devmem_ptr, reg);
 	   				ws->i2c_channel = 1;
-	   				printf("data_rcv_1 = 0x%x\n\r", (unsigned int) ws->pkt_in[i]);
+	   				//printf("data_rcv_1 = 0x%x\n\r", (unsigned int) ws->pkt_in[i]);
        	}
 
 		i2c_slave_complete( (void *)ws, 0 );
@@ -345,7 +345,7 @@ i2c_master_write_0( IPMI_WS *ws )
     }
 
     for (n=0; n<=ws->len_out; n++) {
-    		printf("data_sent_0 = %x\n\r", (unsigned int) msgs[0].buf[n]);
+    		//printf("data_sent_0 = %x\n\r", (unsigned int) msgs[0].buf[n]);
     }
 
     msgset[0].msgs = msgs;
@@ -435,7 +435,7 @@ i2c_master_write_1( IPMI_WS *ws )
     }
 
     for (n=0; n<=ws->len_out; n++) {
-    		printf("data_sent_1 = %x\n\r", (unsigned int) msgs[0].buf[n]);
+    		//printf("data_sent_1 = %x\n\r", (unsigned int) msgs[0].buf[n]);
     }
 
     msgset[0].msgs = msgs;

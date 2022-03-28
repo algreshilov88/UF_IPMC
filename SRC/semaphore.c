@@ -172,6 +172,23 @@ int create_semaphore (int dev_ind)
 	return 0;
 }
 
+int reset_semaphore (int dev_ind)
+{
+	int semid = fd_semid[dev_ind];
+	union semun arg;
+
+	arg.val = 0;
+
+	if ((semctl(semid, 0, SETVAL, arg)) == -1)
+	{
+		perror("semctl()");
+		return -1;
+	}
+
+
+	return 0;
+}
+
 void lock (int i2c_bus)
 {
 	if (sigemptyset (&x) < 0)

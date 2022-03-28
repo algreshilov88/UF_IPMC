@@ -31,6 +31,7 @@
 #include "picmg.h"
 #include "toml.h"
 #include <unistd.h>
+#include <signal.h>
 
 extern unsigned long long int lbolt;
 
@@ -51,7 +52,39 @@ int main()
 
         dbprintf( DBG_I2C | DBG_LVL1, "Hello World\n");
 
+//      time = lbolt;int main()
+{
+	unsigned long time;
+
+	/* Initialize system */
+	ws_init();
+	timer_initialize();
+	semaphore_initialize();
+	i2c_initialize();
+	i2c_sensor_initialize();
+	module_init();
+
+        dbprintf( DBG_I2C | DBG_LVL1, "Hello World\n");
+
 //      time = lbolt;
+
+//	picmg_m1_state( 0 );
+
+	/* Do forever */
+	while( 1 )
+	{
+		/* Blink system activity LEDs once every second */
+        	/*if( ( time + 2 ) < lbolt ) {
+			time = lbolt;
+			gpio_toggle_activity_led();
+        	}*/
+		timer_process_callout_queue();
+		usleep(1000);
+	}
+
+	i2c_deinitialize();
+	i2c_sensor_deinitialize();
+}
 
 //	picmg_m1_state( 0 );
 

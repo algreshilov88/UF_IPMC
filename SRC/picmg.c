@@ -497,14 +497,11 @@ picmg_m1_state( unsigned fru_id )
 	msg.evt_data1 = 0xa << 4 | FRU_STATE_M1_INACTIVE;
 	msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M0_NOT_INSTALLED;
 
-	if( fru[fru_id].state == FRU_STATE_M0_NOT_INSTALLED ) {
-		fru[fru_id].old_state = FRU_STATE_M0_NOT_INSTALLED;
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M0_NOT_INSTALLED;
-	}
+	fru[fru_id].old_state = FRU_STATE_M0_NOT_INSTALLED;
 
 	if( fru[fru_id].state == FRU_STATE_M2_ACTIVATION_REQUEST ) {
 		fru[fru_id].old_state = FRU_STATE_M2_ACTIVATION_REQUEST;
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M2_ACTIVATION_REQUEST;
+		msg.evt_data2 = STATE_CH_SH_MGR << 4 | FRU_STATE_M2_ACTIVATION_REQUEST;
 	}
 
 	if( fru[fru_id].state == FRU_STATE_M6_DEACTIVATION_IN_PROGRESS ) {
@@ -513,13 +510,18 @@ picmg_m1_state( unsigned fru_id )
 	}
 
 	if( fru[fru_id].state == FRU_STATE_M1_INACTIVE &&
-			fru[fru_id].old_state == FRU_STATE_M0_NOT_INSTALLED ) {
+		fru[fru_id].old_state == FRU_STATE_M0_NOT_INSTALLED ) {
 		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M0_NOT_INSTALLED;
 	}
 
 	if( fru[fru_id].state == FRU_STATE_M1_INACTIVE &&
+	 	fru[fru_id].old_state == FRU_STATE_M2_ACTIVATION_REQUEST ) {
+		msg.evt_data2 = STATE_CH_COMM_CHANGE_LOC_DETECTED << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
+	}
+
+	if( fru[fru_id].state == FRU_STATE_M1_INACTIVE &&
 			fru[fru_id].old_state == FRU_STATE_M6_DEACTIVATION_IN_PROGRESS ) {
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M6_DEACTIVATION_IN_PROGRESS;
+		msg.evt_data2 = STATE_CH_COMM_CHANGE_LOC_DETECTED << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
 	}
 
 	msg.evt_data3 = controller_fru_dev_id;
@@ -565,9 +567,13 @@ picmg_m2_state( unsigned fru_id )
 
     	dbprintf( DBG_IPMI | DBG_INOUT, "picmg_m2_state: ingress\n" );
 
-	logger("Hot Swap Event Message", "M1 -> M2");
+	if( fru[fru_id].state == FRU_STATE_M1_INACTIVE ) {
+		logger("Hot Swap Event Message", "M1 -> M2");
+	}
 
-	fru[fru_id].state = FRU_STATE_M2_ACTIVATION_REQUEST;
+	if( fru[fru_id].state == FRU_STATE_M2_ACTIVATION_REQUEST ) {
+		logger("Hot Swap Event Message", "M7 -> M2 (Communication regained)");
+	}
 
 	/* blink blue LED at long blink rate */
 //	gpio_led_blink( GPIO_FRU_LED_BLUE, LONG_BLINK_ON, LONG_BLINK_OFF, 0 );
@@ -580,7 +586,17 @@ picmg_m2_state( unsigned fru_id )
 	msg.evt_direction = IPMI_EVENT_TYPE_GENERIC_AVAILABILITY;
 	msg.evt_data1 = 0xa << 4 | FRU_STATE_M2_ACTIVATION_REQUEST;
 	msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M1_INACTIVE;
+
+	fru[fru_id].old_state = FRU_STATE_M1_INACTIVE;
+
+	if( fru[fru_id].state == FRU_STATE_M2_ACTIVATION_REQUEST &&
+	 	fru[fru_id].old_state == FRU_STATE_M1_INACTIVE ) {
+		msg.evt_data2 = STATE_CH_COMM_CHANGE_LOC_DETECTED << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
+	}
+
 	msg.evt_data3 = controller_fru_dev_id;
+
+	fru[fru_id].state = FRU_STATE_M2_ACTIVATION_REQUEST;
 
 	/* dispatch message */
 	ipmi_send_event_req( ( unsigned char * )&msg, sizeof( FRU_HOT_SWAP_EVENT_MSG_REQ ), 0 );
@@ -781,11 +797,9 @@ picmg_m3_state( unsigned fru_id )
 		logger("Hot Swap Event Message", "M2 -> M3");
 	}
 
-	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE ) {
-		logger("Hot Swap Event Message", "M4 -> M3");
+	if( fru[fru_id].state == FRU_STATE_M3_ACTIVATION_IN_PROGRESS ) {
+		logger("Hot Swap Event Message", "M7 -> M3 (Communication regained)");
 	}
-
-	fru[fru_id].state = FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
 
 	/* blink blue LED at long blink rate */
 //	gpio_led_off( GPIO_FRU_LED_BLUE );
@@ -801,27 +815,16 @@ picmg_m3_state( unsigned fru_id )
 	msg.evt_data1 = 0xa << 4 | FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
 	msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M2_ACTIVATION_REQUEST;
 
-	if( fru[fru_id].state == FRU_STATE_M2_ACTIVATION_REQUEST ) {
+	fru[fru_id].old_state = FRU_STATE_M2_ACTIVATION_REQUEST;
+
+	if( fru[fru_id].state == FRU_STATE_M3_ACTIVATION_IN_PROGRESS ) {
 		fru[fru_id].old_state = FRU_STATE_M2_ACTIVATION_REQUEST;
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M2_ACTIVATION_REQUEST;
-	}
-
-	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE ) {
-		fru[fru_id].old_state = FRU_STATE_M4_ACTIVE;
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M4_ACTIVE;
-	}
-
-	if( fru[fru_id].state == FRU_STATE_M3_ACTIVATION_IN_PROGRESS &&
-			fru[fru_id].old_state == FRU_STATE_M2_ACTIVATION_REQUEST ) {
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M2_ACTIVATION_REQUEST;
-	}
-
-	if( fru[fru_id].state == FRU_STATE_M3_ACTIVATION_IN_PROGRESS &&
-			fru[fru_id].old_state == FRU_STATE_M4_ACTIVE ) {
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M4_ACTIVE;
+		msg.evt_data2 = STATE_CH_COMM_CHANGE_LOC_DETECTED << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
 	}
 
 	msg.evt_data3 = controller_fru_dev_id;
+
+	fru[fru_id].state = FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
 
 	/* dispatch message */
 	ipmi_send_event_req( ( unsigned char * )&msg, sizeof( FRU_HOT_SWAP_EVENT_MSG_REQ ), 0 );
@@ -844,7 +847,7 @@ picmg_m4_state( unsigned fru_id )
 	}
 
 	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE ) {
-		logger("Hot Swap Event Message", "M7 -> M4");
+		logger("Hot Swap Event Message", "M7 -> M4 (Communication regained)");
 	}
 
 //	fru[fru_id].state = FRU_STATE_M4_ACTIVE;
@@ -872,28 +875,15 @@ picmg_m4_state( unsigned fru_id )
 	msg.evt_data1 = 0xa << 4 | FRU_STATE_M4_ACTIVE;
 	msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
 
-	if( fru[fru_id].state == FRU_STATE_M3_ACTIVATION_IN_PROGRESS ) {
-		fru[fru_id].old_state = FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
-	}
+	fru[fru_id].old_state = FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
+
 	if( fru[fru_id].state == FRU_STATE_M5_DEACTIVATION_REQUEST ) {
 		fru[fru_id].old_state = FRU_STATE_M5_DEACTIVATION_REQUEST;
 		msg.evt_data2 = STATE_CH_SH_MGR << 4 | FRU_STATE_M5_DEACTIVATION_REQUEST;
 	}
 
-	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE &&
-			fru[fru_id].old_state == FRU_STATE_M3_ACTIVATION_IN_PROGRESS ) {
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
-	}
-
-	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE &&
-			fru[fru_id].old_state == FRU_STATE_M5_DEACTIVATION_REQUEST ) {
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M5_DEACTIVATION_REQUEST;
-	}
-
-	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE &&
-			fru[fru_id].old_state == FRU_STATE_M4_ACTIVE ) {
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
+	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE ) {
+		msg.evt_data2 = STATE_CH_COMM_CHANGE_LOC_DETECTED << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
 	}
 
 	msg.evt_data3 = controller_fru_dev_id;
@@ -918,9 +908,13 @@ picmg_m5_state( unsigned fru_id )
 
     	dbprintf( DBG_IPMI | DBG_INOUT, "picmg_m5_state: ingress\n" );
 
-	logger("Hot Swap Event Message", "M4 -> M5");
+	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE ) {
+		logger("Hot Swap Event Message", "M4 -> M5");
+	}
 
-	fru[fru_id].state = FRU_STATE_M5_DEACTIVATION_REQUEST;
+	if( fru[fru_id].state == FRU_STATE_M5_DEACTIVATION_REQUEST ) {
+		logger("Hot Swap Event Message", "M7 -> M5 (Communication regained)");
+	}
 
 	/* blink blue LED at short blink rate */
 //	gpio_led_blink( GPIO_FRU_LED_BLUE, SHORT_BLINK_ON, SHORT_BLINK_OFF, 0 );
@@ -946,7 +940,14 @@ picmg_m5_state( unsigned fru_id )
 					   [7:0] = FRU Device ID */
 	msg.evt_data1 = 0xa << 4 | FRU_STATE_M5_DEACTIVATION_REQUEST;
 	msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M4_ACTIVE;
+
+	if( fru[fru_id].state == FRU_STATE_M5_DEACTIVATION_REQUEST ) {
+		msg.evt_data2 = STATE_CH_COMM_CHANGE_LOC_DETECTED << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
+	}
+
 	msg.evt_data3 = controller_fru_dev_id;
+
+	fru[fru_id].state = FRU_STATE_M5_DEACTIVATION_REQUEST;
 
 	/* dispatch message */
 	ipmi_send_event_req( ( unsigned char * )&msg, sizeof( FRU_HOT_SWAP_EVENT_MSG_REQ ), 0 );
@@ -970,6 +971,10 @@ picmg_m6_state( unsigned fru_id )
 
 	if( fru[fru_id].state == FRU_STATE_M5_DEACTIVATION_REQUEST ) {
 		logger("Hot Swap Event Message", "M5 -> M6");
+	}
+
+	if( fru[fru_id].state == FRU_STATE_M6_DEACTIVATION_IN_PROGRESS ) {
+		logger("Hot Swap Event Message", "M7 -> M6 (Communication regained)");
 	}
 
 	/* set state */
@@ -1000,33 +1005,26 @@ picmg_m6_state( unsigned fru_id )
 	msg.evt_data1 = 0xa << 4 | FRU_STATE_M6_DEACTIVATION_IN_PROGRESS;
 	msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M5_DEACTIVATION_REQUEST;
 
-	if( fru[fru_id].state == FRU_STATE_M5_DEACTIVATION_REQUEST ) {
-		fru[fru_id].old_state = FRU_STATE_M5_DEACTIVATION_REQUEST;
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M5_DEACTIVATION_REQUEST;
-	}
+	fru[fru_id].old_state = FRU_STATE_M5_DEACTIVATION_REQUEST;
+
 	if( fru[fru_id].state == FRU_STATE_M3_ACTIVATION_IN_PROGRESS ) {
-//		msg.evt_data2 = STATE_CH_OPERATOR << 4 | FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
 		fru[fru_id].old_state = FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
 		msg.evt_data2 = STATE_CH_FRU_ACTION << 4 | FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
+		//msg.evt_data2 = STATE_CH_OPERATOR << 4 | FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
 	}
 	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE ) {
-		fru[fru_id].state = FRU_STATE_M4_ACTIVE;
+		fru[fru_id].old_state = FRU_STATE_M4_ACTIVE;
 		msg.evt_data2 = 0x09 << 4 | FRU_STATE_M4_ACTIVE;
 	}
 
 	if( fru[fru_id].state == FRU_STATE_M6_DEACTIVATION_IN_PROGRESS &&
-			fru[fru_id].old_state == FRU_STATE_M5_DEACTIVATION_REQUEST ) {
-		msg.evt_data2 = STATE_CH_NORMAL << 4 | FRU_STATE_M5_DEACTIVATION_REQUEST;
+		fru[fru_id].old_state == FRU_STATE_M3_ACTIVATION_IN_PROGRESS ) {
+		msg.evt_data2 = STATE_CH_COMM_CHANGE_LOC_DETECTED << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
 	}
 
 	if( fru[fru_id].state == FRU_STATE_M6_DEACTIVATION_IN_PROGRESS &&
-			fru[fru_id].old_state == FRU_STATE_M3_ACTIVATION_IN_PROGRESS ) {
-		msg.evt_data2 = STATE_CH_FRU_ACTION << 4 | FRU_STATE_M3_ACTIVATION_IN_PROGRESS;
-	}
-
-	if( fru[fru_id].state == FRU_STATE_M6_DEACTIVATION_IN_PROGRESS &&
-			fru[fru_id].old_state == FRU_STATE_M4_ACTIVE ) {
-		msg.evt_data2 = 0x09 << 4 | FRU_STATE_M4_ACTIVE;
+		fru[fru_id].old_state == FRU_STATE_M4_ACTIVE ) {
+		msg.evt_data2 = STATE_CH_COMM_CHANGE_LOC_DETECTED << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
 	}
 
 	msg.evt_data3 = controller_fru_dev_id;
@@ -1619,6 +1617,8 @@ picmg_set_ipmb_state( IPMI_PKT *pkt )
 	SET_IPMB_STATE_CMD_REQ	*req = ( SET_IPMB_STATE_CMD_REQ * )pkt->req;
 	SET_IPMB_STATE_CMD_RESP	*resp = ( SET_IPMB_STATE_CMD_RESP * )pkt->resp;
 
+	unsigned int ret;
+
     dbprintf( DBG_IPMI | DBG_INOUT, "picmg_set_ipmb_state: ingress\n" );
 
 	/*if( req->ipmb_a_state )
@@ -1636,16 +1636,20 @@ picmg_set_ipmb_state( IPMI_PKT *pkt )
 
 	if ( req->ipmb_a_state == 0 )
 	{
-		reg_write(devmem_ptr, qbv_on_off, 1);
+		ret = reg_read(devmem_ptr, qbv_on_off);
+		ret |= 0x02;
+		reg_write(devmem_ptr, qbv_on_off, ret);
 		sd[2].ipmb_a_disabled_ipmb_b_enabled = 1;
-		fru_ipmb_a_b_event_set = 1;
+		fru_ipmb_a_b_event_set = 0;
 	}
 
 	if ( req->ipmb_b_state == 0 )
 	{
-		reg_write(devmem_ptr, qbv_on_off, 2);
+		ret = reg_read(devmem_ptr, qbv_on_off);
+		ret |= 0x01;
+		reg_write(devmem_ptr, qbv_on_off, ret);
 		sd[2].ipmb_a_enabled_ipmb_b_disabled = 1;
-		fru_ipmb_a_b_event_set = 1;
+		fru_ipmb_a_b_event_set = 0;
 	}
 
 	if ( req->ipmb_a_link_id != 0 && req->ipmb_b_link_id != 0 )
@@ -1653,14 +1657,14 @@ picmg_set_ipmb_state( IPMI_PKT *pkt )
 		resp->completion_code = CC_INVALID_CMD;
 		sd[2].ipmb_a_disabled_ipmb_b_enabled = 0;
 		sd[2].ipmb_a_enabled_ipmb_b_disabled = 0;
-		fru_ipmb_a_b_event_set = 0;
+		fru_ipmb_a_b_event_set = 1;
 	}
 	if ( req->ipmb_a_state == 0 && req->ipmb_b_state == 0 )
 	{
 		resp->completion_code = CC_NOT_SUPPORTED;
 		sd[2].ipmb_a_disabled_ipmb_b_enabled = 0;
 		sd[2].ipmb_a_enabled_ipmb_b_disabled = 0;
-		fru_ipmb_a_b_event_set = 0;
+		fru_ipmb_a_b_event_set = 1;
 	}
 	pkt->hdr.resp_data_len = sizeof( SET_IPMB_STATE_CMD_RESP ) - 1;
 }
