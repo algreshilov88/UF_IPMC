@@ -42,25 +42,22 @@ int main()
 {
 	unsigned long time;
 
-	/* Initialize system */
-	ws_init();
-	timer_initialize();
-	semaphore_initialize();
-	i2c_initialize();
-	i2c_sensor_initialize();
-	module_init();
 
-        dbprintf( DBG_I2C | DBG_LVL1, "Hello World\n");
-
-//      time = lbolt;int main()
-{
-	unsigned long time;
+  signal(SIGQUIT, sig_handler);
+  signal(SIGTERM, sig_handler);
+  signal(SIGABRT, sig_handler);
+  signal(SIGFPE, sig_handler);
+  signal(SIGILL, sig_handler);
+  signal(SIGSEGV, sig_handler);
+  signal(SIGHUP, sig_handler);
+  signal(SIGINT, sig_handler);
 
 	/* Initialize system */
 	ws_init();
 	timer_initialize();
 	semaphore_initialize();
 	i2c_initialize();
+	ipmb_buffers_enable();
 	i2c_sensor_initialize();
 	module_init();
 
@@ -84,22 +81,5 @@ int main()
 
 	i2c_deinitialize();
 	i2c_sensor_deinitialize();
-}
-
-//	picmg_m1_state( 0 );
-
-	/* Do forever */
-	while( 1 )
-	{
-		/* Blink system activity LEDs once every second */
-        	/*if( ( time + 2 ) < lbolt ) {
-			time = lbolt;
-			gpio_toggle_activity_led();
-        	}*/
-		timer_process_callout_queue();
-		usleep(1000);
-	}
-
-	i2c_deinitialize();
-	i2c_sensor_deinitialize();
+	ipmb_buffers_disable();
 }
