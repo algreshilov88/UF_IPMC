@@ -11,7 +11,7 @@ owner_id = 0					#7-bit I2C Slave, fill during init
 id_type = 0					#0b = owner_id is IPMB Slave Address
 
 #BYTE 7
-channel_num = 1					#[7:4] channel_num
+channel_num = 0					#[7:4] channel_num
 rsv1 = 0					#[3:2] reserved
 sensor_owner_lun = 0				#[1:0] sensor_owner_lun
 
@@ -56,25 +56,25 @@ sensor_units2 = 0				#22 sensor_units2
 sensor_units3 = 0				#23 sensor_units3
 
 linearization = 0				#24 linearization
-M = 1						#25 M 
+M = 1						#25 M
 M_tolerance = 0					#26 M Tolerance
 B = 0						#27 B
-B_accuracy = 0					#28 B Accuracy 
+B_accuracy = 0					#28 B Accuracy
 accuracy = 0					#29 Accuracy, Accuracy exp, Sensor Direction
-K1 = 0						#30 R exp 
-K2 = 0						#30 B exp 
-analog_characteristic_flags = 0			#31 Analog characteristic flags 
+K1 = 0						#30 R exp
+K2 = 0						#30 B exp
+analog_characteristic_flags = 0			#31 Analog characteristic flags
 nominal_reading = 0				#32 Nominal Reading
 normal_maximum = 0				#33 Normal Maximum - Given as a raw value.
 normal_minimum = 0				#34 Normal Minimum - Given as a raw value.
-sensor_maximum_reading = 0x00			#35 Sensor Maximum Reading 
+sensor_maximum_reading = 0x00			#35 Sensor Maximum Reading
 sensor_minimum_reading = 0x00			#36 Sensor Minimum Reading
 upper_non_recoverable_threshold = 0x00		#37 Upper non-recoverable Threshold
-upper_critical_threshold = 0x00			#38 Upper critical Threshold 
-upper_non_critical_threshold = 0x00		#39 Upper non-critical Threshold 
+upper_critical_threshold = 0x00			#38 Upper critical Threshold
+upper_non_critical_threshold = 0x00		#39 Upper non-critical Threshold
 lower_non_recoverable_threshold = 0x00		#40 Lower non-recoverable Threshold
-lower_critical_threshold = 0			#41 Lower critical Threshold 
-lower_non_critical_threshold = 0x0		#42 Lower non-critical Threshold 
+lower_critical_threshold = 0			#41 Lower critical Threshold
+lower_non_critical_threshold = 0x0		#42 Lower non-critical Threshold
 positive_going_threshold_hysteresis_value = 0	#43 Positive-going Threshold Hysteresis value
 negative_going_threshold_hysteresis_value = 0	#44 Negative-going Threshold Hysteresis value
 reserved2 = 0					#45 reserved. Write as 00h.
