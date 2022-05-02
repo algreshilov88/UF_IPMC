@@ -160,101 +160,101 @@ void read_sensor_temp_qsfp_max(void) {
 										temp_max = temp_b;
 								}
 						}
-
-						sd[sensor_N].last_sensor_reading = temp_max;
-						sd[sensor_N].sensor_scanning_enabled = 1;
-						sd[sensor_N].event_messages_enabled = 1;
-						sd[sensor_N].unavailable = 0;
-
-						temp_max = 0;
-
-        		static int first_time = 1;
-        		static int up_noncrt_assert = 0;
-
-        		if (first_time) {
-            		first_time = 0;
-        		} else if (sd[sensor_N].last_sensor_reading >= sdr[sensor_N].upper_non_recoverable_threshold) {
-            		// Transition to M6 for non-recoverable
-								sd[sensor_N].current_state_mask = 0xE0;
-            		unlock(3);
-            		picmg_m6_state(fru_inventory_cache[0].fru_dev_id);
-            		logger("WARNING","Non-recoverable threshold crossed for QSFPDD temperature sensor");
-            		lock(3);
-        		} else if (up_noncrt_assert == 0 && sd[sensor_N].last_sensor_reading >= sdr[sensor_N].upper_critical_threshold) {
-								sd[sensor_N].current_state_mask = 0xD0;
-								// Assertion message for shelf manager
-            		FRU_TEMPERATURE_EVENT_MSG_REQ msg;
-            		msg.command = 0x02;
-			          msg.evt_msg_rev = 0x04;
-            		msg.sensor_type = 0x01;
-            		msg.sensor_number = sensor_N;
-            		msg.evt_direction = 0x01;
-            		msg.evt_data2_qual = 0x01;
-            		msg.evt_data3_qual = 0x01;
-            		msg.evt_reason = 0x07;
-            		msg.temp_reading = sd[sensor_N].last_sensor_reading;
-            		msg.threshold = sdr[sensor_N].upper_critical_threshold;
-
-            		ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_TEMPERATURE_EVENT_MSG_REQ), 0);
-            		up_noncrt_assert = 1;
-						} else if (up_noncrt_assert == 1 && sd[sensor_N].last_sensor_reading < sdr[sensor_N].upper_critical_threshold) {
-								sd[sensor_N].current_state_mask = 0xC0;
-            		// Deassertion message for shelf manager
-            		FRU_TEMPERATURE_EVENT_MSG_REQ msg;
-            		msg.command = 0x02;
-            		msg.evt_msg_rev = 0x04;
-            		msg.sensor_type = 0x01;
-            		msg.sensor_number = sensor_N;
-            		msg.evt_direction = 0x81;
-            		msg.evt_data2_qual = 0x01;
-            		msg.evt_data3_qual = 0x01;
-            		msg.evt_reason = 0x07;
-            		msg.temp_reading = sd[sensor_N].last_sensor_reading;
-            		msg.threshold = sdr[sensor_N].upper_critical_threshold;
-
-            		ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_TEMPERATURE_EVENT_MSG_REQ), 0);
-            		up_noncrt_assert = 0;
-        		} else if (up_noncrt_assert == 0 && sd[sensor_N].last_sensor_reading >= sdr[sensor_N].upper_non_critical_threshold) {
-								sd[sensor_N].current_state_mask = 0xC8;
-            		// Assertion message for shelf manager
-            		FRU_TEMPERATURE_EVENT_MSG_REQ msg;
-            		msg.command = 0x02;
-			          msg.evt_msg_rev = 0x04;
-            		msg.sensor_type = 0x01;
-            		msg.sensor_number = sensor_N;
-            		msg.evt_direction = 0x01;
-            		msg.evt_data2_qual = 0x01;
-            		msg.evt_data3_qual = 0x01;
-            		msg.evt_reason = 0x07;
-            		msg.temp_reading = sd[sensor_N].last_sensor_reading;
-            		msg.threshold = sdr[sensor_N].upper_non_critical_threshold;
-
-            		ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_TEMPERATURE_EVENT_MSG_REQ), 0);
-            		up_noncrt_assert = 1;
-        		} else if (up_noncrt_assert == 1 && sd[sensor_N].last_sensor_reading < sdr[sensor_N].upper_non_critical_threshold) {
-								sd[sensor_N].current_state_mask = 0xC0;
-            		// Deassertion message for shelf manager
-            		FRU_TEMPERATURE_EVENT_MSG_REQ msg;
-            		msg.command = 0x02;
-            		msg.evt_msg_rev = 0x04;
-            		msg.sensor_type = 0x01;
-            		msg.sensor_number = sensor_N;
-            		msg.evt_direction = 0x81;
-            		msg.evt_data2_qual = 0x01;
-            		msg.evt_data3_qual = 0x01;
-            		msg.evt_reason = 0x07;
-            		msg.temp_reading = sd[sensor_N].last_sensor_reading;
-            		msg.threshold = sdr[sensor_N].upper_non_critical_threshold;
-
-            		ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_TEMPERATURE_EVENT_MSG_REQ), 0);
-            		up_noncrt_assert = 0;
-        		}
 				}
+
+				sd[sensor_N].last_sensor_reading = temp_max;
+				sd[sensor_N].sensor_scanning_enabled = 1;
+				sd[sensor_N].event_messages_enabled = 1;
+				sd[sensor_N].unavailable = 0;
+
+				temp_max = 0;
+
+        static int first_time = 1;
+        static int up_noncrt_assert = 0;
+
+        if (first_time) {
+            		first_time = 0;
+        } else if (sd[sensor_N].last_sensor_reading >= sdr[sensor_N].upper_non_recoverable_threshold) {
+            // Transition to M6 for non-recoverable
+						sd[sensor_N].current_state_mask = 0xE0;
+            unlock(3);
+            picmg_m6_state(fru_inventory_cache[0].fru_dev_id);
+          	logger("WARNING","Non-recoverable threshold crossed for QSFPDD temperature sensor");
+            lock(3);
+        } else if (up_noncrt_assert == 0 && sd[sensor_N].last_sensor_reading >= sdr[sensor_N].upper_critical_threshold) {
+						sd[sensor_N].current_state_mask = 0xD0;
+						// Assertion message for shelf manager
+          	FRU_TEMPERATURE_EVENT_MSG_REQ msg;
+          	msg.command = 0x02;
+			      msg.evt_msg_rev = 0x04;
+          	msg.sensor_type = 0x01;
+          	msg.sensor_number = sensor_N;
+          	msg.evt_direction = 0x01;
+            msg.evt_data2_qual = 0x01;
+            msg.evt_data3_qual = 0x01;
+            msg.evt_reason = 0x07;
+            msg.temp_reading = sd[sensor_N].last_sensor_reading;
+            msg.threshold = sdr[sensor_N].upper_critical_threshold;
+
+            ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_TEMPERATURE_EVENT_MSG_REQ), 0);
+            up_noncrt_assert = 1;
+				} else if (up_noncrt_assert == 1 && sd[sensor_N].last_sensor_reading < sdr[sensor_N].upper_critical_threshold) {
+						sd[sensor_N].current_state_mask = 0xC0;
+            // Deassertion message for shelf manager
+            FRU_TEMPERATURE_EVENT_MSG_REQ msg;
+            msg.command = 0x02;
+            msg.evt_msg_rev = 0x04;
+            msg.sensor_type = 0x01;
+          	msg.sensor_number = sensor_N;
+            msg.evt_direction = 0x81;
+            msg.evt_data2_qual = 0x01;
+            msg.evt_data3_qual = 0x01;
+            msg.evt_reason = 0x07;
+            msg.temp_reading = sd[sensor_N].last_sensor_reading;
+            msg.threshold = sdr[sensor_N].upper_critical_threshold;
+
+            ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_TEMPERATURE_EVENT_MSG_REQ), 0);
+            up_noncrt_assert = 0;
+        } else if (up_noncrt_assert == 0 && sd[sensor_N].last_sensor_reading >= sdr[sensor_N].upper_non_critical_threshold) {
+						sd[sensor_N].current_state_mask = 0xC8;
+            // Assertion message for shelf manager
+            FRU_TEMPERATURE_EVENT_MSG_REQ msg;
+            msg.command = 0x02;
+			      msg.evt_msg_rev = 0x04;
+            msg.sensor_type = 0x01;
+            msg.sensor_number = sensor_N;
+            msg.evt_direction = 0x01;
+            msg.evt_data2_qual = 0x01;
+            msg.evt_data3_qual = 0x01;
+          	msg.evt_reason = 0x07;
+            msg.temp_reading = sd[sensor_N].last_sensor_reading;
+            msg.threshold = sdr[sensor_N].upper_non_critical_threshold;
+
+            ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_TEMPERATURE_EVENT_MSG_REQ), 0);
+            up_noncrt_assert = 1;
+        } else if (up_noncrt_assert == 1 && sd[sensor_N].last_sensor_reading < sdr[sensor_N].upper_non_critical_threshold) {
+						sd[sensor_N].current_state_mask = 0xC0;
+          	// Deassertion message for shelf manager
+            FRU_TEMPERATURE_EVENT_MSG_REQ msg;
+            msg.command = 0x02;
+          	msg.evt_msg_rev = 0x04;
+            msg.sensor_type = 0x01;
+            msg.sensor_number = sensor_N;
+            msg.evt_direction = 0x81;
+            msg.evt_data2_qual = 0x01;
+            msg.evt_data3_qual = 0x01;
+            msg.evt_reason = 0x07;
+            msg.temp_reading = sd[sensor_N].last_sensor_reading;
+            msg.threshold = sdr[sensor_N].upper_non_critical_threshold;
+
+            ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_TEMPERATURE_EVENT_MSG_REQ), 0);
+            up_noncrt_assert = 0;
+        }
     } else {
 				sd[sensor_N].last_sensor_reading = 0;
-        sd[sensor_N].sensor_scanning_enabled = 0;
-        sd[sensor_N].event_messages_enabled = 0;
-        sd[sensor_N].unavailable = 1;
+				sd[sensor_N].sensor_scanning_enabled = 0;
+				sd[sensor_N].event_messages_enabled = 0;
+				sd[sensor_N].unavailable = 1;
 				sd[sensor_N].current_state_mask = 0;
     }
     unlock(3);

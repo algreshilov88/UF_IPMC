@@ -65,7 +65,7 @@ K1 = 0
 K2 = 0
 analog_characteristic_flags = 0			#31 Analog characteristic flags
 
-nominal_reading = 0x0				#32 Nominal Reading
+nominal_reading = 0x23				#32 Nominal Reading
 normal_maximum = 0xFF				#33 Normal Maximum - Given as a raw value.
 normal_minimum = 0				#34 Normal Minimum - Given as a raw value.
 sensor_maximum_reading = 0xFF			#35 Sensor Maximum Reading
