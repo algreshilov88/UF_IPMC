@@ -1,0 +1,84 @@
+#IPMC SDR2 <<Full Sensor Record (Type 01h) - IPMB-0 Status>>
+
+[SDR2]
+record_id = [2,0]				#[0-1] of this record
+sdr_version = 0x51				#SDR version
+record_type = 0x1				#Full sensor record
+record_len = 0x38				#Number of remaining record bytes following
+
+#BYTE 6
+owner_id = 0					#7-bit I2C Slave, fill during init
+id_type = 0					#0b = owner_id is IPMB Slave Address
+
+#BYTE 7
+channel_num = 0					#[7:4] channel_num
+rsv1 = 0					#[3:2] reserved
+sensor_owner_lun = 0				#[1:0] sensor_owner_lun
+
+sensor_number = 0x2				#8 sensor number
+entity_id = 0xA0				#9 entity_id
+
+#BYTE 10
+entity_type = 0					#0b = treat entity as a physical entity
+entity_instance_num = 0x60			#60h-7Fh device-relative Entity Instance.
+
+#BYTE 11 - Sensor initialization
+rsv2 = 0					#[7] - reserved. Write as 0b
+init_scanning = 0				#[6] init_scanning
+init_events = 0					#[5] init_events
+init_thresholds = 0				#[4] - reserved. Write as 0b
+init_hysteresis = 0				#[3] init_hysteresis
+init_sensor_type = 0				#[2] init_sensor_type
+powerup_evt_generation = 1			#[1] powerup_evt_generation
+powerup_sensor_scanning = 1			#[0] powerup_sensor_scanning
+
+#BYTE 12 - Sensor capabilities
+ignore_sensor = 1				#[7] ignore_sensor
+sensor_manual_support = 1			#[6] sensor_manual_support
+sensor_hysteresis_support = 0			#[5:4] sensor_hysteresis_support
+sensor_threshold_access = 0			#[3:2] sensor_threshold_access
+event_msg_control = 0				#[1:0] event_msg_control
+
+sensor_type = 0xF1				#13 sensor_type = 1 - Temp sensor
+event_type_code = 0x6F				#14 event_type_code
+
+assertion_event_mask = 0x001F			#15,16 assertion event_mask
+deassertion_event_mask = 0x001F			#17,18 deassertion event mask
+reading_mask = 0x001F				#19,20 reading_mask
+
+#BYTE 21
+analog_data_format = 0				#[7:6] Analog (numeric) Data Format - 2s complement (signed)
+rate_unit = 0					#[5:3] rate_unit - 000b = none
+modifier_unit = 0				#[2:1] modifier_unit - 00b = none
+percentage = 0					#[0] percentage - 0b
+
+sensor_units2 = 0				#22 sensor_units2
+sensor_units3 = 0				#23 sensor_units3
+
+linearization = 0				#24 linearization
+M = 0						#25 M
+M_tolerance = 0					#26 M Tolerance
+B = 0						#27 B
+B_accuracy = 0					#28 B Accuracy
+accuracy = 0					#29 Accuracy, Accuracy exp, Sensor Direction
+K1 = 0						#30 R exp
+K2 = 0						#30 B exp
+analog_characteristic_flags = 0			#31 Analog characteristic flags
+nominal_reading = 0				#32 Nominal Reading
+normal_maximum = 0				#33 Normal Maximum - Given as a raw value.
+normal_minimum = 0				#34 Normal Minimum - Given as a raw value.
+sensor_maximum_reading = 0x00			#35 Sensor Maximum Reading
+sensor_minimum_reading = 0x00			#36 Sensor Minimum Reading
+upper_non_recoverable_threshold = 0x00		#37 Upper non-recoverable Threshold
+upper_critical_threshold = 0x00			#38 Upper critical Threshold
+upper_non_critical_threshold = 0x00		#39 Upper non-critical Threshold
+lower_non_recoverable_threshold = 0x00		#40 Lower non-recoverable Threshold
+lower_critical_threshold = 0			#41 Lower critical Threshold
+lower_non_critical_threshold = 0x0		#42 Lower non-critical Threshold
+positive_going_threshold_hysteresis_value = 0	#43 Positive-going Threshold Hysteresis value
+negative_going_threshold_hysteresis_value = 0	#44 Negative-going Threshold Hysteresis value
+reserved2 = 0					#45 reserved. Write as 00h.
+reserved3 = 0					#46 reserved. Write as 00h.
+oem = 0						#47 OEM - Reserved for OEM use.
+id_str_typ_len = 0xCD				#48 id_str_typ_len Sensor ID String Type/Length Code, 5 chars in str
+id_string_bytes = ["I", "P", "M", "B", "-", "0", " ", "S", "T", "A", "T", "U", "S"]	#ID String Bytes
