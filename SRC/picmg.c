@@ -970,7 +970,7 @@ picmg_m6_state( unsigned fru_id )
 	}
 
 	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE ) {
-		logger("Hot Swap Event Message", "M4 -> M6 (Unexpected Deactivation)");
+		logger("Hot Swap Event Message", "M4 -> M6 (Surprise State Change due to power failure)");
 	}
 
 	if( fru[fru_id].state == FRU_STATE_M5_DEACTIVATION_REQUEST ) {
@@ -1018,7 +1018,7 @@ picmg_m6_state( unsigned fru_id )
 	}
 	if( fru[fru_id].state == FRU_STATE_M4_ACTIVE ) {
 		fru[fru_id].old_state = FRU_STATE_M4_ACTIVE;
-		msg.evt_data2 = 0x09 << 4 | FRU_STATE_M4_ACTIVE;
+		msg.evt_data2 = 0x0A << 4 | FRU_STATE_M4_ACTIVE;
 	}
 
 	if( fru[fru_id].state == FRU_STATE_M6_DEACTIVATION_IN_PROGRESS &&
@@ -1030,7 +1030,7 @@ picmg_m6_state( unsigned fru_id )
 	if( fru[fru_id].state == FRU_STATE_M6_DEACTIVATION_IN_PROGRESS &&
 		fru[fru_id].old_state == FRU_STATE_M4_ACTIVE ) {
 		//msg.evt_data2 = STATE_CH_COMM_CHANGE_LOC_DETECTED << 4 | FRU_STATE_M7_COMMUNICATION_LOST;
-		msg.evt_data2 = 0x09 << 4 | FRU_STATE_M4_ACTIVE;
+		msg.evt_data2 = 0x0A << 4 | FRU_STATE_M4_ACTIVE;
 	}
 
 	msg.evt_data3 = controller_fru_dev_id;

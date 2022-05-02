@@ -165,6 +165,9 @@ void read_sensor_temp_qsfp_max(void) {
 						sd[sensor_N].sensor_scanning_enabled = 1;
 						sd[sensor_N].event_messages_enabled = 1;
 						sd[sensor_N].unavailable = 0;
+
+						temp_max = 0;
+
         		static int first_time = 1;
         		static int up_noncrt_assert = 0;
 
