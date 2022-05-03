@@ -231,8 +231,8 @@ void read_sensor_temp_qsfp_max(void) {
             msg.threshold = sdr[sensor_N].upper_non_critical_threshold;
 
             ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_TEMPERATURE_EVENT_MSG_REQ), 0);
-            up_noncrt_assert = 1;
-        } else if (up_noncrt_assert == 1 && sd[sensor_N].last_sensor_reading < sdr[sensor_N].upper_non_critical_threshold) {
+            up_noncrt_assert = 2;
+        } else if (up_noncrt_assert == 2 && sd[sensor_N].last_sensor_reading < sdr[sensor_N].upper_non_critical_threshold) {
 						sd[sensor_N].current_state_mask = 0xC0;
           	// Deassertion message for shelf manager
             FRU_TEMPERATURE_EVENT_MSG_REQ msg;
