@@ -129,18 +129,25 @@ module_get_i2c_address( int address_type )
 
 void sig_handler(int signo)
 {
-        if (signo == SIGABRT ||
-            signo == SIGQUIT ||
+        if (signo == SIGQUIT ||
             signo == SIGTERM ||
-            signo == SIGILL  ||
-            signo == SIGFPE  ||
-            signo == SIGINT  ||
-            signo == SIGSEGV)
+            signo == SIGINT)
         {
                 ipmb_buffers_disable();
                 //reset_semaphore(ind);
                 exit(EXIT_SUCCESS);
         }
+
+				if (signo == SIGABRT ||
+						signo == SIGILL  ||
+						signo == SIGFPE  ||
+						signo == SIGHUP  ||
+						signo == SIGSEGV)
+				{
+								ipmb_buffers_disable();
+								//reset_semaphore(ind);
+								exit(EXIT_FAILURE);
+				}
 }
 
 
