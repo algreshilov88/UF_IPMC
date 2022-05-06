@@ -318,6 +318,7 @@ i2c_master_write_0( IPMI_WS *ws )
     long funcs;
     unsigned int i, n;
 		unsigned int ret;
+		unsigned char outbuf[ws->len_out];
 
     struct i2c_msg msgs[1];
     struct i2c_rdwr_ioctl_data msgset[1];
@@ -341,15 +342,18 @@ i2c_master_write_0( IPMI_WS *ws )
     msgs[0].addr = remote_i2c_address/2;
     msgs[0].flags = 0;
     msgs[0].len = ws->len_out;
-    if ((msgs[0].buf = (unsigned char *)malloc(ws->len_out+1)) == NULL)
+    /*if ((msgs[0].buf = (unsigned char *)malloc(ws->len_out+1)) == NULL)
 		{
 				logger("ERROR", "malloc() failed in i2c_master_write_0()");
 				exit(EXIT_FAILURE);
-		}
+		}*/
 
     for (i=0; i<=ws->len_out; i++) {
-        msgs[0].buf[i] = ws->pkt_out[i];
+        //msgs[0].buf[i] = ws->pkt_out[i];
+				outbuf[i] = ws->pkt_out[i];
     }
+
+		msgs[0].buf = outbuf;
 
     for (n=0; n<=ws->len_out; n++) {
     		//printf("data_sent_0 = %x\n\r", (unsigned int) msgs[0].buf[n]);
@@ -383,11 +387,11 @@ i2c_master_write_0( IPMI_WS *ws )
 
 						i2c_master_write_0( ws );
 				} else {*/
-						if (msgs[0].buf != NULL)
+						/*if (msgs[0].buf != NULL)
 						{
 								free(msgs[0].buf);
 								msgs[0].buf = NULL;
-						}
+						}*/
 
 						i2c_master_write_1( ws );
 				//}
@@ -404,11 +408,11 @@ i2c_master_write_0( IPMI_WS *ws )
 		//printf("i2c_msg_sent \n");
     }
 
-		if (msgs[0].buf != NULL)
+		/*if (msgs[0].buf != NULL)
 		{
 				free(msgs[0].buf);
 				msgs[0].buf = NULL;
-		}
+		}*/
 }
 
 void
@@ -417,6 +421,7 @@ i2c_master_write_1( IPMI_WS *ws )
     long funcs;
     unsigned int i, n;
 		unsigned int ret;
+		unsigned char outbuf[ws->len_out];
 
     struct i2c_msg msgs[1];
     struct i2c_rdwr_ioctl_data msgset[1];
@@ -440,15 +445,18 @@ i2c_master_write_1( IPMI_WS *ws )
     msgs[0].addr = remote_i2c_address/2;
     msgs[0].flags = 0;
     msgs[0].len = ws->len_out;
-    if ((msgs[0].buf = (unsigned char *)malloc(ws->len_out+1)) == NULL)
+    /*if ((msgs[0].buf = (unsigned char *)malloc(ws->len_out+1)) == NULL)
 		{
 				logger("ERROR", "malloc() failed in i2c_master_write_1()");
 				exit(EXIT_FAILURE);
-		}
+		}*/
 
     for (i=0; i<=ws->len_out; i++) {
-        msgs[0].buf[i] = ws->pkt_out[i];
+        //msgs[0].buf[i] = ws->pkt_out[i];
+				outbuf[i] = ws->pkt_out[i];
     }
+
+		msgs[0].buf = outbuf;
 
     for (n=0; n<=ws->len_out; n++) {
     		//printf("data_sent_1 = %x\n\r", (unsigned int) msgs[0].buf[n]);
@@ -482,11 +490,11 @@ i2c_master_write_1( IPMI_WS *ws )
 
 						i2c_master_write_1( ws );
 				} else {*/
-						if (msgs[0].buf != NULL)
+						/*if (msgs[0].buf != NULL)
 						{
 								free(msgs[0].buf);
 								msgs[0].buf = NULL;
-						}
+						}*/
 
 						i2c_master_write_0( ws );
 				//}
@@ -502,11 +510,11 @@ i2c_master_write_1( IPMI_WS *ws )
 				//printf("i2c_msg_sent \n");
     }
 
-		if (msgs[0].buf != NULL)
+		/*if (msgs[0].buf != NULL)
 		{
 				free(msgs[0].buf);
 				msgs[0].buf = NULL;
-		}
+		}*/
 }
 
 /* Master op transport completion routine */
