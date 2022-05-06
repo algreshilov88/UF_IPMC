@@ -312,7 +312,7 @@ i2c_slave_read_1( void )
  * 	Gets called by ws_process_work_list() when we find a ws with state
  * 	WS_ACTIVE_MASTER_WRITE_PENDING in the work list.
  */
-void
+int
 i2c_master_write_0( IPMI_WS *ws )
 {
     long funcs;
@@ -393,7 +393,8 @@ i2c_master_write_0( IPMI_WS *ws )
 								msgs[0].buf = NULL;
 						}*/
 
-						i2c_master_write_1( ws );
+						//i2c_master_write_1( ws );
+						return -1;
 				//}
     } else {
 				ret = reg_read(devmem_ptr, set_MS);
@@ -413,9 +414,10 @@ i2c_master_write_0( IPMI_WS *ws )
 				free(msgs[0].buf);
 				msgs[0].buf = NULL;
 		}*/
+		return 0;
 }
 
-void
+int
 i2c_master_write_1( IPMI_WS *ws )
 {
     long funcs;
@@ -496,7 +498,8 @@ i2c_master_write_1( IPMI_WS *ws )
 								msgs[0].buf = NULL;
 						}*/
 
-						i2c_master_write_0( ws );
+						//i2c_master_write_0( ws );
+						return -1;
 				//}
     } else {
 				ret = reg_read(devmem_ptr, set_MS);
@@ -515,6 +518,21 @@ i2c_master_write_1( IPMI_WS *ws )
 				free(msgs[0].buf);
 				msgs[0].buf = NULL;
 		}*/
+		return 0;
+}
+
+void
+i2c_master_write( IPMI_WS *ws ) {
+		int ret = -1;
+		while (ret < 0)
+		{
+				ret = i2c_master_write_0( ws );
+
+				if (ret < 0)
+				{
+						ret = i2c_master_write_1( ws );
+				}
+		}
 }
 
 /* Master op transport completion routine */

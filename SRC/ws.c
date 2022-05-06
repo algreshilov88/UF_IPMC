@@ -169,7 +169,10 @@ void ws_process_work_list_0( void )
 		ws_set_state( ws, WS_ACTIVE_MASTER_WRITE_PENDING );
 		switch( ws->outgoing_medium ) {
 			case IPMI_CH_MEDIUM_IPMB:
-                		i2c_master_write_0( ws );
+                		if (i2c_master_write_0( ws ) < 0)
+										{
+												i2c_master_write( ws );
+										}
 				break;
 
 			case IPMI_CH_MEDIUM_SERIAL:	/* Asynch. Serial/Modem (RS-232) 	*/
@@ -212,7 +215,10 @@ void ws_process_work_list_1( void )
 		ws_set_state( ws, WS_ACTIVE_MASTER_WRITE_PENDING );
 		switch( ws->outgoing_medium ) {
 			case IPMI_CH_MEDIUM_IPMB:
-                		i2c_master_write_1( ws );
+                		if (i2c_master_write_1( ws ) < 0)
+										{
+												i2c_master_write( ws );
+										}
 				break;
 
 			case IPMI_CH_MEDIUM_SERIAL:	/* Asynch. Serial/Modem (RS-232) 	*/
