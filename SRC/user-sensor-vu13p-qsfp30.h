@@ -81,4 +81,8 @@ union voltage
 void user_sensor_state_poll(void);
 void user_module_sensor_init(void);
 void semaphore_initialize(void);
-void read_sensor_temp_qsfp_max(void);
+void read_sensor_pgood(void);
+void read_sensor_temp_qsfp30_max(void);
+void read_sensor_temp_DSE0133V2NBC(void);
+void read_sensor_temp_PIM400KZ(void);
+void read_sensor_temp_XADC(void);

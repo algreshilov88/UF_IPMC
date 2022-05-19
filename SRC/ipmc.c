@@ -62,6 +62,13 @@ unsigned int hot_swap_handle_last_state;
 unsigned int fru_ipmb_a_b_last_state = 0x00;
 unsigned int fru_ipmb_a_b_init_state = 0x00;
 unsigned int fru_ipmb_a_b_event_set = 0x01;
+long long int prototype;
+long long int polarity_bot;
+long long int polarity_top;
+long long int polarity_qsfp;
+long long int pok_en_bot;
+long long int pok_en_top;
+long long int pok_en_qsfp;
 
 extern unsigned long long int lbolt;
 extern FRU_CACHE fru_inventory_cache[];
@@ -380,6 +387,8 @@ module_init( void )
 {
 	toml_table_t* config;
 	toml_table_t* hdl_m;
+	toml_table_t* prttype;
+	toml_table_t* plrty;
 	toml_raw_t raw;
 	long long int man_handle_status;
 	long long int man_handle_switch;
@@ -408,6 +417,86 @@ module_init( void )
 	if (fclose(fp) < 0) {
 		fclose(fp);
 		perror("fclose() failed");
+	}
+
+	/* Locate the [PROTOTYPE] table. */
+	if (0 == (prttype = toml_table_in(config, "PROTOTYPE"))) {
+		logger("ERROR", "toml_table_in() 'PROTOTYPE' in module_init()");
+	}
+
+	/* Extract 'prototype' config value. */
+	if (0 == (raw = toml_raw_in(prttype, "prototype"))) {
+		logger("ERROR", "toml_raw_in() 'prototype' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &prototype)) {
+		logger("ERROR", "toml_rtoi() 'prototype' in module_init()");
+	}
+
+	/* Extract 'enable_bot' config value. */
+	if (0 == (raw = toml_raw_in(prttype, "init_enable_bot"))) {
+		logger("ERROR", "toml_raw_in() 'init_enable_bot' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &pok_en_bot)) {
+		logger("ERROR", "toml_rtoi() 'pok_en_bot' in module_init()");
+	}
+
+	/* Extract 'enable_top' config value. */
+	if (0 == (raw = toml_raw_in(prttype, "init_enable_top"))) {
+		logger("ERROR", "toml_raw_in() 'init_enable_top' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &pok_en_top)) {
+		logger("ERROR", "toml_rtoi() 'pok_en_top' in module_init()");
+	}
+
+	/* Extract 'qsfp' config value. */
+	if (0 == (raw = toml_raw_in(prttype, "init_enable_qsfp"))) {
+		logger("ERROR", "toml_raw_in() 'init_enable_qsfp' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &pok_en_qsfp)) {
+		logger("ERROR", "toml_rtoi() 'pok_en_qsfp' in module_init()");
+	}
+
+	/* Locate the [POK_CHANGE_POLARITY] table. */
+	if (0 == (plrty = toml_table_in(config, "POK_CHANGE_POLARITY"))) {
+		logger("ERROR", "toml_table_in() 'POK_CHANGE_POLARITY' in module_init()");
+	}
+
+	/* Extract 'bot' config value. */
+	if (0 == (raw = toml_raw_in(plrty, "bot"))) {
+		logger("ERROR", "toml_raw_in() 'bot' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &polarity_bot)) {
+		logger("ERROR", "toml_rtoi() 'polarity_bot' in module_init()");
+	}
+
+	/* Extract 'top' config value. */
+	if (0 == (raw = toml_raw_in(plrty, "top"))) {
+		logger("ERROR", "toml_raw_in() 'top' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &polarity_top)) {
+		logger("ERROR", "toml_rtoi() 'polarity_top' in module_init()");
+	}
+
+	/* Extract 'qsfp' config value. */
+	if (0 == (raw = toml_raw_in(plrty, "qsfp"))) {
+		logger("ERROR", "toml_raw_in() 'qsfp' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &polarity_qsfp)) {
+		logger("ERROR", "toml_rtoi() 'polarity_qsfp' in module_init()");
 	}
 
 	/* Locate the [HANDLE_SWITCH_M] table. */
@@ -453,7 +542,7 @@ module_init( void )
 
 	fru_data_init();
 
-	fru[fru_inventory_cache[0].fru_dev_id].state == FRU_STATE_M0_NOT_INSTALLED;
+	fru[fru_inventory_cache[0].fru_dev_id].state = FRU_STATE_M0_NOT_INSTALLED;
 
 	picmg_m1_state( 0 );
 

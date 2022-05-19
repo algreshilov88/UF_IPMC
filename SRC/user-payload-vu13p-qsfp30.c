@@ -30,8 +30,8 @@
 #include "toml.h"
 #include "sensor.h"
 #include "logger.h"
-#include "user-payload-octopus-qsfpdd.h"
-#include "user-sensor-octopus-qsfpdd.h"
+#include "user-payload-vu13p-qsfp30.h"
+#include "user-sensor-vu13p-qsfp30.h"
 #include "semaphore.h"
 #include <stdio.h>
 #include <stdint.h>
@@ -42,8 +42,15 @@
 #define PAYLOAD_OFF		0
 #define PAYLOAD_ON		1
 
-
 #define qbv_on_off              0x1220000
+
+extern long long int prototype;
+extern long long int polarity_bot;
+extern long long int polarity_top;
+extern long long int polarity_qsfp;
+extern long long int pok_en_bot;
+extern long long int pok_en_top;
+extern long long int pok_en_qsfp;
 
 extern unsigned long long int lbolt;
 extern FRU_CACHE fru_inventory_cache[];
@@ -56,31 +63,75 @@ static int power_up_done = 0;
 
 void user_module_payload_on( void )
 {
-	unsigned int payload_read;
+	unsigned int payload_rw;
+	unsigned int val_plrty_bot;
+	unsigned int val_plrty_top;
+	unsigned int val_plrty_qsfp;
+	unsigned int val_pok_en_bot;
+	unsigned int val_pok_en_top;
+	unsigned int val_pok_en_qsfp;
 
-	lock(3);
-	payload_read = reg_read(devmem_ptr, qbv_on_off);
-	payload_read |= 0x20;
-	reg_write(devmem_ptr, qbv_on_off, payload_read);
+	val_plrty_bot = (unsigned int) polarity_bot << 20;
+	val_plrty_top = (unsigned int) val_plrty_top << 21;
+	val_plrty_qsfp = (unsigned int) val_plrty_qsfp << 22;
+
+	val_pok_en_bot = (unsigned int) pok_en_bot << 23;
+	val_pok_en_top = (unsigned int) val_pok_en_top << 24;
+	val_pok_en_qsfp = (unsigned int) val_pok_en_qsfp << 25;
+
+	payload_rw = reg_read(devmem_ptr, qbv_on_off);
+	payload_rw |= (val_plrty_bot | val_plrty_top | val_plrty_qsfp |
+								 val_pok_en_bot | val_pok_en_top | val_pok_en_qsfp | 0x20);
+	reg_write(devmem_ptr, qbv_on_off, payload_rw);
+
+	if (prototype)
+	{
+		usleep(200000);
+
+		if (polarity_bot)
+		{
+			val_pok_en_bot = ((unsigned int) pok_en_bot | 0x1) << 23;
+			val_pok_en_top = ((unsigned int) val_pok_en_top | 0x1) << 24;
+			val_pok_en_qsfp = ((unsigned int) val_pok_en_qsfp | 0x1) << 25;
+		}
+		else
+		{
+			val_pok_en_bot = ((unsigned int) pok_en_bot & 0x0) << 23;
+			val_pok_en_top = ((unsigned int) val_pok_en_top & 0x0) << 24;
+			val_pok_en_qsfp = ((unsigned int) val_pok_en_qsfp & 0x0) << 25;
+		}
+
+		payload_rw = reg_read(devmem_ptr, qbv_on_off);
+		payload_rw |= (val_pok_en_bot | val_pok_en_top | val_pok_en_qsfp);
+		reg_write(devmem_ptr, qbv_on_off, payload_rw);
+	}
+
 	payload_timeout_init = lbolt;
 	logger("PAYLOAD", "On");
 	power_up_done = 1;
-	unlock(3);
-
 }
 
 void
 user_module_payload_off( void )
 {
-  lock(3);
-  unsigned int payload_read;
-  payload_read = reg_read(devmem_ptr, qbv_on_off);
-  payload_read &= ~0x20;
-  power_up_done = 0;
-  reg_write(devmem_ptr, qbv_on_off, payload_read);
-  logger("PAYLOAD", "Off");
-  unlock(3);
+  unsigned int payload_rw;
+	unsigned int val_pok_en_bot;
+	unsigned int val_pok_en_top;
+	unsigned int val_pok_en_qsfp;
 
+	val_pok_en_bot = (unsigned int) pok_en_bot << 23;
+	val_pok_en_top = (unsigned int) val_pok_en_top << 24;
+	val_pok_en_qsfp = (unsigned int) val_pok_en_qsfp << 25;
+
+	payload_rw = reg_read(devmem_ptr, qbv_on_off);
+	payload_rw |= (val_pok_en_bot | val_pok_en_top | val_pok_en_qsfp);
+	reg_write(devmem_ptr, qbv_on_off, payload_rw);
+
+  payload_rw = reg_read(devmem_ptr, qbv_on_off);
+  payload_rw &= ~0x20;
+  power_up_done = 0;
+  reg_write(devmem_ptr, qbv_on_off, payload_rw);
+  logger("PAYLOAD", "Off");
 }
 
 void
