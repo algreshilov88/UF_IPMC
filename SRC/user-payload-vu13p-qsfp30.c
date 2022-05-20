@@ -88,18 +88,9 @@ void user_module_payload_on( void )
 	{
 		usleep(200000);
 
-		if (polarity_bot)
-		{
-			val_pok_en_bot = ((unsigned int) pok_en_bot | 0x1) << 23;
-			val_pok_en_top = ((unsigned int) val_pok_en_top | 0x1) << 24;
-			val_pok_en_qsfp = ((unsigned int) val_pok_en_qsfp | 0x1) << 25;
-		}
-		else
-		{
-			val_pok_en_bot = ((unsigned int) pok_en_bot & 0x0) << 23;
-			val_pok_en_top = ((unsigned int) val_pok_en_top & 0x0) << 24;
-			val_pok_en_qsfp = ((unsigned int) val_pok_en_qsfp & 0x0) << 25;
-		}
+		val_pok_en_bot = ((unsigned int) pok_en_bot & 0x0) << 23;
+		val_pok_en_top = ((unsigned int) val_pok_en_top & 0x0) << 24;
+		val_pok_en_qsfp = ((unsigned int) val_pok_en_qsfp & 0x0) << 25;
 
 		payload_rw = reg_read(devmem_ptr, qbv_on_off);
 		payload_rw |= (val_pok_en_bot | val_pok_en_top | val_pok_en_qsfp);
