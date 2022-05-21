@@ -72,12 +72,12 @@ void user_module_payload_on( void )
 	unsigned int val_pok_en_qsfp;
 
 	val_plrty_bot = (unsigned int) polarity_bot << 20;
-	val_plrty_top = (unsigned int) val_plrty_top << 21;
-	val_plrty_qsfp = (unsigned int) val_plrty_qsfp << 22;
+	val_plrty_top = (unsigned int) polarity_top << 21;
+	val_plrty_qsfp = (unsigned int) polarity_qsfp << 22;
 
 	val_pok_en_bot = (unsigned int) pok_en_bot << 23;
-	val_pok_en_top = (unsigned int) val_pok_en_top << 24;
-	val_pok_en_qsfp = (unsigned int) val_pok_en_qsfp << 25;
+	val_pok_en_top = (unsigned int) pok_en_top << 24;
+	val_pok_en_qsfp = (unsigned int) pok_en_qsfp << 25;
 
 	payload_rw = reg_read(devmem_ptr, qbv_on_off);
 	payload_rw |= (val_plrty_bot | val_plrty_top | val_plrty_qsfp |

@@ -427,7 +427,7 @@ int pmbus_two_bytes_read(int i2c_fd_snsr, u8 slave_addr, u8 reg, u16 *result) {
         return (-1);
     }
 
-    result = &inbuf.inbuf16;
+    *result = inbuf.inbuf16;
 
     return 0;
 }

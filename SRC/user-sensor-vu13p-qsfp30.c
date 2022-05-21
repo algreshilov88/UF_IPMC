@@ -379,8 +379,7 @@ void read_sensor_temp_DSE0133V2NBC(void) {
 		u16 result = 0;
 
 		pmbus_two_bytes_read(i2c_fd_snsr[i2c_ch], i2c_addr, pmbus_cmd, &result);
-		float temp_f = ((float) result)/256.;
-		u8 temp_b = (u8)(temp_f);
+		u8 temp_b = (u8)(result);
 
 		sd[sensor_N].last_sensor_reading = temp_b;
 		sd[sensor_N].sensor_scanning_enabled = 1;
@@ -604,10 +603,8 @@ void read_sensor_temp_XADC(void) {
 		} else if (sd[sensor_N].last_sensor_reading >= sdr[sensor_N].upper_non_recoverable_threshold) {
 				// Transition to M6 for non-recoverable
 				sd[sensor_N].current_state_mask = 0xE0;
-				unlock(4);
 				picmg_m6_state(fru_inventory_cache[0].fru_dev_id);
 				logger("WARNING","Non-recoverable threshold crossed for XADC temperature sensor");
-				lock(4);
 		} else if (up_noncrt_assert == 0 && sd[sensor_N].last_sensor_reading >= sdr[sensor_N].upper_critical_threshold) {
 				sd[sensor_N].current_state_mask = 0xD0;
 				// Assertion message for shelf manager
@@ -677,8 +674,6 @@ void read_sensor_temp_XADC(void) {
 				ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_TEMPERATURE_EVENT_MSG_REQ), 0);
 				up_noncrt_assert = 0;
 		}
-
-    unlock(4);
 }
 
 void pgood_state_poll( unsigned char *arg ) {
