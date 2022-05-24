@@ -586,7 +586,7 @@ void read_sensor_temp_PIM400KZ(void) {
 void read_sensor_temp_XADC(void) {
     //	Sensor Data Record
     u8 sensor_N = 8;
-		u8 result = 0;
+		u32 result = 0;
     u16 temp_d = 0;
     u32 xadc_reg_rw;
 
