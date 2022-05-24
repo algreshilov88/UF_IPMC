@@ -46,7 +46,9 @@
 #include "octopus.h"
 
 #define qbv_on_off              0x1220000
-#define xadc_offset							0x3c30000
+#define xadc_temp_offset				0x3c30200
+#define xadc_cr0_offset        	0x3c30300
+#define xadc_cr1_offset        	0x3c30300
 #define payload_off_alarm				0x1220008
 
 extern unsigned long long int lbolt;
@@ -585,9 +587,20 @@ void read_sensor_temp_XADC(void) {
     //	Sensor Data Record
     u8 sensor_N = 8;
 		u8 result = 0;
+    u16 temp_d = 0;
+    u32 xadc_reg_rw;
 
-		result = reg_read(devmem_ptr, xadc_offset);
-		float temp_f = (((float) result)*503.975)/4096. - 273.15;
+    xadc_reg_rw = reg_read(devmem_ptr, xadc_cr0_offset);
+    xadc_reg_rw &= ~0x40ff;
+    reg_write(devmem_ptr, xadc_cr0_offset, xadc_reg_rw);
+
+    xadc_reg_rw = reg_read(devmem_ptr, xadc_cr1_offset);
+    xadc_reg_rw &= ~0xf000;
+    reg_write(devmem_ptr, xadc_cr1_offset, xadc_reg_rw);
+
+		result = reg_read(devmem_ptr, xadc_temp_offset);
+    temp_d = (result >> 4)&0xfff;
+		float temp_f = (((float) temp_d)*503.975)/4096. - 273.15;
 		u8 temp_b = (u8)(temp_f);
 
 		sd[sensor_N].last_sensor_reading = temp_b;
