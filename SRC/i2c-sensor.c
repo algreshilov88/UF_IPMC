@@ -39,8 +39,6 @@
 
 #define MAX_SENSOR_COUNT	20
 
-typedef unsigned char   u8;
-
 /*==============================================================
  * i2c_sensor_initialize()
  *==============================================================*/
@@ -388,7 +386,7 @@ int pmbus_two_bytes_read(int i2c_fd_snsr, u8 slave_addr, u8 reg, u16 *result) {
     struct i2c_rdwr_ioctl_data msgset[1];
 		union inbuf
 		{
-		    short int inbuf16;
+		    unsigned short int inbuf16;
 		    unsigned char  inbuf8[2];
 		} inbuf;
 

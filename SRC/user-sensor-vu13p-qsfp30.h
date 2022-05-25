@@ -17,8 +17,6 @@
     You should have received a copy of the GNU General Public License
     along with UF_IPMC.  If not, see <https://www.gnu.org/licenses/>.
 */
-typedef long long int u64;
-typedef unsigned int u32;
 
 // this structure defines position of the qsfp select bit within I2C expansion registers
 typedef struct qsfp_select_s
@@ -29,31 +27,18 @@ typedef struct qsfp_select_s
 } qsfp_select_t;
 
 // read temperature
-typedef union temperature
+union temperature
 {
     short int t16;
     unsigned char  t8[2];
 } t;
 
 // read voltage
-typedef union voltage
+union voltage
 {
     unsigned short int v16;
     unsigned char  v8[2];
 } v;
-
-// PMBus Linear Data Format
-typedef struct
-{
-    int16_t base : 11;
-    int16_t mantissa : 5;
-} linear11_t;
-
-typedef union
-{
-    linear11_t linear;
-    uint16_t raw;
-} linear11_val_t;
 
 void user_sensor_state_poll(void);
 void user_module_sensor_init(void);

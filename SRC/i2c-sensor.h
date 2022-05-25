@@ -18,7 +18,7 @@
     along with UF_IPMC.  If not, see <https://www.gnu.org/licenses/>.
 */
 typedef unsigned char u8;
-typedef short int u16;
+typedef unsigned short int u16;
 
 int i2c_write(int i2c_fd_snsr, u8 slave_addr, u8 reg, u8 data);
 int i2c_read(int i2c_fd_snsr, u8 slave_addr, u8 reg, u8 *result);
