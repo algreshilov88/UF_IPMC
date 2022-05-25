@@ -387,10 +387,17 @@ void read_sensor_temp_DSE0133V2NBC(void) {
     mantissa = (result >> 11) & 0x1f;
     exp_sign = (mantissa >> 4) & 0x1;
     sign = ((base >> 10) & 0x1) ? -1 : 1;
-    k = (exp_sign) ? -(~(mantissa & 0xf) + 1) : ~(mantissa & 0xf) + 1;
-    base_2s = ~(base & 0x3ff)+1;
+    k = (~(mantissa & 0xf)) + 0x1;
+    base_2s = (~(base & 0x3ff)) + 0x1;
     base_tmp = (sign) ? base : base_2s;
-    temp = sign * base_tmp * (double) (1 << k);
+    if (exp_sign)
+    {
+      temp = (double) sign * (double) base_tmp * (double) (1/(1 << k));
+    }
+    else
+    {
+      temp = (double) sign * (double) base_tmp * (double) (1 << k);
+    }
 
 		u8 temp_b = (u8)(temp);
 
