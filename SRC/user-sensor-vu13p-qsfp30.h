@@ -29,18 +29,31 @@ typedef struct qsfp_select_s
 } qsfp_select_t;
 
 // read temperature
-union temperature
+typedef union temperature
 {
     short int t16;
     unsigned char  t8[2];
 } t;
 
 // read voltage
-union voltage
+typedef union voltage
 {
     unsigned short int v16;
     unsigned char  v8[2];
 } v;
+
+// PMBus Linear Data Format
+typedef struct
+{
+    int16_t base : 11;
+    int16_t mantissa : 5;
+} linear11_t;
+
+typedef union
+{
+    linear11_t linear;
+    uint16_t raw;
+} linear11_val_t;
 
 void user_sensor_state_poll(void);
 void user_module_sensor_init(void);
