@@ -17,6 +17,7 @@
     You should have received a copy of the GNU General Public License
     along with UF_IPMC.  If not, see <https://www.gnu.org/licenses/>.
 */
+typedef unsigned int u32;
 
 // this structure defines position of the qsfp select bit within I2C expansion registers
 typedef struct qsfp_select_s
