@@ -48,7 +48,7 @@ typedef struct
     short int mantissa : 5;
 } linear11_t;
 
-union
+typedef union
 {
     linear11_t linear;
     unsigned short int raw;

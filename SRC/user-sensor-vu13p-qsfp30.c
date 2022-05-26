@@ -388,8 +388,9 @@ void read_sensor_temp_DSE0133V2NBC(void) {
 
     if (t.linear.mantissa < 0)
     {
-      temp = (double) (1 << t.linear.mantissa);
-      temp = t.linear.base * ((1/temp));
+      short int mantissa = -t.linear.mantissa;
+      double tmp = (double) (1 << t.linear.mantissa);
+      temp = t.linear.base * (1/tmp);
     }
     else
     {
