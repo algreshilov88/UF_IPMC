@@ -378,25 +378,22 @@ void read_sensor_temp_DSE0133V2NBC(void) {
 		u8 i2c_ch = 2;
 		u8 i2c_addr = 0x36;
 		u8 pmbus_cmd = 0x8D;
-		u16 result = 0, base = 0, mantissa = 0, exp_sign = 0, base_2s = 0, base_tmp = 0;
-    int sign, k = 0;
-    double temp;
+		u16 result = 0;
+    linear11_val_t t;
+    double temp = 0.0;
 
 		pmbus_two_bytes_read(i2c_fd_snsr[i2c_ch], i2c_addr, pmbus_cmd, &result);
-    base = result & 0x7ff;
-    mantissa = (result >> 11) & 0x1f;
-    exp_sign = (mantissa >> 4) & 0x1;
-    sign = ((base >> 10) & 0x1) ? -1 : 1;
-    k = (~(mantissa & 0xf)) + 0x1;
-    base_2s = (~(base & 0x3ff)) + 0x1;
-    base_tmp = (sign) ? base : base_2s;
-    if (exp_sign)
+
+    t.raw = result;
+
+    if (t.linear.mantissa < 0)
     {
-      temp = (double) sign * (double) base_tmp * (double) (1/(1 << k));
+      temp = (double) (1 << t.linear.mantissa);
+      temp = t.linear.base * ((1/temp));
     }
     else
     {
-      temp = (double) sign * (double) base_tmp * (double) (1 << k);
+      temp = t.linear.base * (double) (1 << t.linear.mantissa);
     }
 
 		u8 temp_b = (u8)(temp);

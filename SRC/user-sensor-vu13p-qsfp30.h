@@ -41,6 +41,19 @@ union voltage
     unsigned char  v8[2];
 } v;
 
+//PMBus Linear Data information
+typedef struct
+{
+    short int base : 11;
+    short int mantissa : 5;
+} linear11_t;
+
+union
+{
+    linear11_t linear;
+    unsigned short int raw;
+} linear11_val_t;
+
 void user_sensor_state_poll(void);
 void user_module_sensor_init(void);
 void semaphore_initialize(void);
