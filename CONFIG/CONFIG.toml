@@ -17,9 +17,9 @@ qsfp = 0
 
 [PROTOTYPE]
 prototype = 1             # 0 - No, 1 - Yes
-init_enable_bot = 0       # Initial state (required for power up sequence): 0 - Active, 1 - Inactive
-init_enable_top = 0       # Initial state (required for power up sequence): 0 - Active, 1 - Inactive
-init_enable_qsfp = 0      # Initial state (required for power up sequence): 0 - Active, 1 - Inactive
+init_enable_bot = 0       # Initial state (modules with incorrect POK logic should be set as "Inactive"): 0 - "Inactive", 1 - "Active"
+init_enable_top = 0       # Initial state (modules with incorrect POK logic should be set as "Inactive"): 0 - "Inactive", 1 - "Active"
+init_enable_qsfp = 0      # Initial state (modules with incorrect POK logic should be set as "Inactive"): 0 - "Inactive", 1 - "Active"
 
 [HANDLE_SWITCH_M]
 man_handle_status = 0			#enable/disable MANUAL management: 1 = ON, 0 = OFF.

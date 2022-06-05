@@ -80,17 +80,20 @@ void user_module_payload_on( void )
 	val_pok_en_qsfp = (unsigned int) pok_en_qsfp << 25;
 
 	payload_rw = reg_read(devmem_ptr, qbv_on_off);
-	payload_rw |= (val_plrty_bot | val_plrty_top | val_plrty_qsfp |
-								 val_pok_en_bot | val_pok_en_top | val_pok_en_qsfp | 0x20);
+	payload_rw |= (val_plrty_bot | val_plrty_top | val_plrty_qsfp | val_pok_en_bot | val_pok_en_top | val_pok_en_qsfp);
 	reg_write(devmem_ptr, qbv_on_off, payload_rw);
+
+	payload_rw = reg_read(devmem_ptr, qbv_on_off);
+  payload_rw |= 0x20;
+  reg_write(devmem_ptr, qbv_on_off, payload_rw);
 
 	if (prototype)
 	{
 		usleep(200000);
 
-		val_pok_en_bot = ((unsigned int) pok_en_bot & 0x0) << 23;
-		val_pok_en_top = ((unsigned int) pok_en_top & 0x0) << 24;
-		val_pok_en_qsfp = ((unsigned int) pok_en_qsfp & 0x0) << 25;
+		val_pok_en_bot = ((unsigned int) pok_en_bot | 0x1) << 23;
+		val_pok_en_top = ((unsigned int) pok_en_top | 0x1) << 24;
+		val_pok_en_qsfp = ((unsigned int) pok_en_qsfp | 0x1) << 25;
 
 		payload_rw = reg_read(devmem_ptr, qbv_on_off);
 		payload_rw |= (val_pok_en_bot | val_pok_en_top | val_pok_en_qsfp);
@@ -98,8 +101,8 @@ void user_module_payload_on( void )
 	}
 
 	payload_timeout_init = lbolt;
-	logger("PAYLOAD", "On");
 	power_up_done = 1;
+	logger("PAYLOAD", "On");
 }
 
 void
@@ -120,8 +123,9 @@ user_module_payload_off( void )
 
   payload_rw = reg_read(devmem_ptr, qbv_on_off);
   payload_rw &= ~0x20;
-  power_up_done = 0;
   reg_write(devmem_ptr, qbv_on_off, payload_rw);
+
+	power_up_done = 0;
   logger("PAYLOAD", "Off");
 }
 
