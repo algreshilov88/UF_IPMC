@@ -1,0 +1,35 @@
+#IPMC SDR0 <<Management Controller Device Locator Record (Type 12h)>>
+
+[SDR0]
+record_id = [0,0]					#record_id[0-1] of this record
+sdr_version = 0x51					#SDR version
+record_type = 0x12					#Management Controller Locator
+record_len = 0x12					#Number of remaining record bytes following
+dev_slave_addr = 0					#[7:1] - 7-bit I2C Slave Address of device on channel. Fill during init.
+ch_num = 0						#[3:0] - Channel number for the channel that the management controller is on.
+
+#BYTE 8
+acpi_sys_pwr_st_notify_req = 0				#0b = no ACPI System Power State notification required
+acpi_dev_pwr_st_notify_req = 0				#0b = no ACPI Device Power State notification required
+rsv1 = 0						#reserved
+rsv2 = 0						#reserved
+ctrl_logs_init_errs = 1					#1b = Controller logs Initialization
+log_init_agent_errs = 1					#1b = Log Initialization Agent errors
+ctrl_init = 0						#[1:0] ctrl_init
+
+#BYTE 9
+dev_sup_chassis = 0					#0b = Not a Chassis Device.
+dev_sup_bridge = 0					#0b = Not a Bridge
+dev_sup_ipmb_evt_gen = 1				#1b = IPMB Event Generator
+dev_sup_ipmb_evt_rcv = 0				#1b = IPMB Event Receiver
+dev_sup_fru_inv = 1					#1b = FRU Inventory Device
+dev_sup_sel = 0						#0b = Not a SEL Device
+dev_sup_sdr_rep = 1					#1b = SDR Repository Device
+dev_sup_sensor = 1					#1b = Sensor Device
+
+rsv = [0,0,0]						#rsv[3] - reserved
+entity_id = 0xA0					#entity_id
+entity_instance = 0x60					#entity_instance
+oem = 0							#Reserved for OEM use
+dev_id_typ_len = 0xC7					#ASCII | 7 bytes
+dev_id_str = ["U", "F", " ", "I", "P", "M", "C"]	#dev_id_str
