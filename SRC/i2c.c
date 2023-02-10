@@ -46,7 +46,8 @@
 #include <string.h>
 #include <time.h>
 
-#define MAX_DELIVERY_ATTEMPTS 1
+#define MAX_DELIVERY_ATTEMPTS 3
+#define I2C_MASTER_COUNT 	  1
 
 #define MAP_SIZE 4096UL
 //#define MAP_MASK (MAP_SIZE - 1)
@@ -524,7 +525,8 @@ i2c_master_write_1( IPMI_WS *ws )
 void
 i2c_master_write( IPMI_WS *ws ) {
 		int ret = -1;
-		while (ret < 0)
+		int count;
+		for (count = 0; count < I2C_MASTER_COUNT; count++)
 		{
 				ret = i2c_master_write_0( ws );
 

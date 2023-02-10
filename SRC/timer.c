@@ -22,6 +22,7 @@
 */
 #include "timer.h"
 #include "error.h"
+#include "logger.h"
 #include <stdio.h>
 #include <signal.h>
 #include <errno.h>
@@ -138,6 +139,8 @@ timer_add_callout_queue(
 		return( ESUCCESS );
 	} else
 		return( ENOMEM );
+		perror("ENOMEM in timer_add_callout_queue()");
+		logger("ERROR", "ENOMEM in timer_add_callout_queue()");
 }
 
 /*==============================================================
@@ -278,10 +281,10 @@ cq_alloc( void )
 		}
 	}
 
-	if ( !found )
+	/*if ( !found )
 	{
 		cq_alloc();
-	}
+	}*/
 	return cqe;
 }
 
