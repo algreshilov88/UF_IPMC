@@ -308,8 +308,9 @@ ipmi_get_sensor_reading( IPMI_PKT *pkt )
 			resp->event_messages_enabled = sensor[i]->event_messages_enabled;
 			resp->sensor_scanning_enabled = sensor[i]->sensor_scanning_enabled;
 			resp->unavailable =  sensor[i]->unavailable;
+			resp->current_state_mask =  sensor[i]->current_state_mask;
 
-			pkt->hdr.resp_data_len = 2;
+			pkt->hdr.resp_data_len = sizeof( GET_SENSOR_READING_RESP ) - 1;
 		} else {
 			resp->completion_code = CC_REQ_DATA_NOT_AVAIL;
        			pkt->hdr.resp_data_len = 0;
@@ -671,5 +672,83 @@ get_sensor_hysteresis ( IPMI_PKT *pkt )
 	} else {
 		resp->completion_code = CC_REQ_DATA_NOT_AVAIL;
 		pkt->hdr.resp_data_len = 0;
+	}
+}
+
+void
+rearm_sensor_events ( IPMI_PKT *pkt )
+{
+	REARM_SENSOR_EVENTS_CMD_RESP *resp = ( REARM_SENSOR_EVENTS_CMD_RESP * )(pkt->resp);
+
+	module_rearm_events();
+
+	resp->completion_code = CC_NORMAL;
+	pkt->hdr.resp_data_len = 0;
+}
+
+void
+get_sensor_event_status( IPMI_PKT *pkt )
+{
+	GET_SENSOR_EVENT_STATUS_CMD_REQ *req = ( GET_SENSOR_EVENT_STATUS_CMD_REQ * )(pkt->req);
+
+	int i, found = 0;
+
+	/* Given the req->sensor_number return the reading */
+	for( i = 1; i < current_sensor_count; i++ ) {
+		if( sensor[i]->sensor_id == req->sensor_number ) {
+			found++;
+			break;
+		}
+	}
+
+	/* if this is a non-periodically scanned sensor, call the sensor scan
+	 * function to update the sensor reading*/
+	if( found && !sensor[i]->scan_period )
+		sensor[i]->scan_function();
+	if (req->sensor_number == 1) {	//reserved for FRU Hot Swap sensor
+		GET_SENSOR_EVENT_STATUS_CMD_RESP *resp = ( GET_SENSOR_EVENT_STATUS_CMD_RESP * )(pkt->resp);
+		if( found ) {
+			resp->completion_code = CC_NORMAL;
+			resp->event_messages_enabled = 1;
+			resp->sensor_scanning_enabled = 1;
+			resp->unavailable = 0;
+			resp->current_state_mask = 0;
+			//resp->reserved = sensor[i]->reserved;
+
+			pkt->hdr.resp_data_len = sizeof( GET_SENSOR_EVENT_STATUS_CMD_RESP ) - 1;
+		} else {
+			resp->completion_code = CC_REQ_DATA_NOT_AVAIL;
+       			pkt->hdr.resp_data_len = 0;
+		}
+	} else if (req->sensor_number == 2) {	//reserved for IPMB-0 Status sensor
+		GET_SENSOR_EVENT_STATUS_CMD_RESP *resp = ( GET_SENSOR_EVENT_STATUS_CMD_RESP * )(pkt->resp);
+		if( found ) {
+			resp->completion_code = CC_NORMAL;
+			resp->event_messages_enabled = 1;
+			resp->sensor_scanning_enabled = 1;
+			resp->unavailable = 0;
+			resp->current_state_mask = 0;
+			//resp->reserved = sensor[i]->reserved;
+
+			pkt->hdr.resp_data_len = sizeof( GET_SENSOR_EVENT_STATUS_CMD_RESP ) - 1;
+		} else {
+			resp->completion_code = CC_REQ_DATA_NOT_AVAIL;
+       			pkt->hdr.resp_data_len = 0;
+		}
+	} else {
+		GET_SENSOR_EVENT_STATUS_CMD_RESP *resp = ( GET_SENSOR_EVENT_STATUS_CMD_RESP * )(pkt->resp);
+		if( found ) {
+			resp->completion_code = CC_NORMAL;
+			resp->event_messages_enabled = sensor[i]->event_messages_enabled;
+			resp->sensor_scanning_enabled = sensor[i]->sensor_scanning_enabled;
+			resp->unavailable =  sensor[i]->unavailable;
+			resp->current_state_mask =  0xff;
+			//resp->reserved = sensor[i]->reserved;
+
+			pkt->hdr.resp_data_len = sizeof( GET_SENSOR_EVENT_STATUS_CMD_RESP ) - 1;
+		} else {
+			resp->completion_code = CC_REQ_DATA_NOT_AVAIL;
+       			pkt->hdr.resp_data_len = 0;
+		}
 	}
 }

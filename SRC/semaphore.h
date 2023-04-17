@@ -20,3 +20,4 @@
 void lock (int i2c_bus);
 void unlock (int i2c_bus);
 int create_semaphore (int dev_ind);
+int reset_semaphore (int dev_ind);

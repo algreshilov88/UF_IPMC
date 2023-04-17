@@ -11,7 +11,7 @@ owner_id = 0					#7-bit I2C Slave, fill during init
 id_type = 0					#0b = owner_id is IPMB Slave Address
 
 #BYTE 7
-channel_num = 1					#[7:4] channel_num
+channel_num = 0					#[7:4] channel_num
 rsv1 = 0					#[3:2] reserved
 sensor_owner_lun = 0				#[1:0] sensor_owner_lun
 

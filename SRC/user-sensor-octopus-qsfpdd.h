@@ -21,11 +21,11 @@ void user_sensor_state_poll(void);
 void user_module_sensor_init(void);
 void semaphore_initialize(void);
 
-void read_sensor_pgood_remote(void);
+
+void read_all_i2c_sensors(void);
 void read_sensor_temp_vup_remote(void);
 void read_sensor_temp_k7_remote(void);
 void read_sensor_temp_rail_2v7_intermediate_remote(void);
 void read_sensor_temp_mgt_vup_remote(void);
-void read_sensor_temp_qsfpdd(void);
 void read_sensor_optics(void);
-//void read_sensor_temp_rail_0v85_vccint_vup_remote(void);
+

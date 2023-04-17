@@ -33,7 +33,7 @@
 #define MAX_DEVICES 20
 
 union semun {
-	int val; 
+	int val;
 	struct semid_ds *buf;
 	unsigned short *array;
 	struct seminfo *__buf;
@@ -79,6 +79,7 @@ int unlock_device(int dev_ind)
 	int sem_id = fd_semid[dev_ind];
 	int nsops = 1;
 	struct sembuf sops[1];
+	union semun arg;
 
 	/* wait for semaphore to reach zero */
 	sops[0].sem_num = 0;
@@ -89,9 +90,19 @@ int unlock_device(int dev_ind)
 	{
 		printf("unlock semop() failed\n");
 		logger("ERROR", "(UNLOCK) in semop() %s", strerror(errno));
+
+		arg.val = 0;
+
+		if ((semctl(sem_id, 0, SETVAL, arg)) == -1)
+		{
+			perror("semctl()");
+			logger("ERROR", "in semctl() %s", strerror(errno));
+			return -2;
+		}
+
 		return -1;
 	}
-	
+
 	/*if ((semctl(sem_id, 0, IPC_RMID)) == -1)
 	{
 		printf("unlock semctl() failed\n");
@@ -110,7 +121,7 @@ int create_semaphore (int dev_ind)
 	int nsems = 1;
 	union semun arg;
 	char * sem_fn = (char*)"/tmp/i2c_semaphore_1.txt";
-	
+
 	FILE* sem_fd = fopen (sem_fn, "wr"); // create a file for semaphore
 	if (sem_fd == NULL)
 	{
@@ -138,15 +149,6 @@ int create_semaphore (int dev_ind)
 				logger("ERROR","(repeat) in semget() %s", strerror(errno));
 				return -3;
 			}
-			
-			arg.val = 0;
-
-			/*if ((semctl(semid, 0, SETVAL, arg)) == -1)
-			{
-				perror("semctl()");
-				logger("ERROR", "in semctl() %s", strerror(errno));
-				return -3;
-			}*/
 		}
 		else
 		{
@@ -166,6 +168,23 @@ int create_semaphore (int dev_ind)
 		logger("ERROR", "in semctl() %s", strerror(errno));
 		return -4;
 	}
+
+	return 0;
+}
+
+int reset_semaphore (int dev_ind)
+{
+	int semid = fd_semid[dev_ind];
+	union semun arg;
+
+	arg.val = 0;
+
+	if ((semctl(semid, 0, SETVAL, arg)) == -1)
+	{
+		perror("semctl()");
+		return -1;
+	}
+
 
 	return 0;
 }

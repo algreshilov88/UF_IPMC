@@ -39,8 +39,9 @@ extern void *devmem_ptr;
 void i2c_initialize( void );
 void i2c_deinitialize( void );
 
-void i2c_master_write_0( IPMI_WS *ws );
-void i2c_master_write_1( IPMI_WS *ws );
+int i2c_master_write_0( IPMI_WS *ws );
+int i2c_master_write_1( IPMI_WS *ws );
+void i2c_master_write( IPMI_WS *ws );
 void i2c_slave_read_0( void );
 void i2c_slave_read_1( void );
 void i2c_set_slave_receive_callback( void ( *callback_fn )( void *, int ) );

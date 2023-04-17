@@ -11,7 +11,7 @@ owner_id = 0					#7-bit I2C Slave, fill during init
 id_type = 0					#0b = owner_id is IPMB Slave Address
 
 #BYTE 7
-channel_num = 1					#[7:4] channel_num
+channel_num = 0					#[7:4] channel_num
 rsv1 = 0					#[3:2] reserved
 sensor_owner_lun = 0				#[1:0] sensor_owner_lun
 
@@ -49,8 +49,8 @@ reading_mask = 0x1818				#19,20 reading_mask
 #BYTE 21
 analog_data_format = 0				#[7:6] Analog (numeric) Data Format - unsigned
 rate_unit = 0					#[5:3] rate_unit - 000b = none
-modifier_unit = 2				#[2:1] modifier_unit - 00b = none
-percentage = 2					#[0] percentage - 0b
+modifier_unit = 0				#[2:1] modifier_unit - 00b = none
+percentage = 0					#[0] percentage - 0b
 
 sensor_units2 = 1				#22 sensor_units2
 sensor_units3 = 0				#23 sensor_units3
@@ -72,7 +72,7 @@ sensor_maximum_reading = 0xFF			#35 Sensor Maximum Reading
 sensor_minimum_reading = 0x00			#36 Sensor Minimum Reading
 upper_non_recoverable_threshold = 0x69		#37 Upper non-recoverable Threshold
 upper_critical_threshold = 0x64			#38 Upper critical Threshold 
-upper_non_critical_threshold = 0x55		#39 Upper non-critical Threshold 
+upper_non_critical_threshold = 0x5a    	        #39 Upper non-critical Threshold 
 lower_non_recoverable_threshold = 0x00		#40 Lower non-recoverable Threshold
 lower_critical_threshold = 0x00			#41 Lower critical Threshold 
 lower_non_critical_threshold = 0x00		#42 Lower non-critical Threshold 

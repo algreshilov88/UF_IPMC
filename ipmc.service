@@ -1,0 +1,15 @@
+
+[Unit]
+ Description=RUN IPMC 
+ After=network-online.target
+ Wants=network-online.target
+ DefaultDependencies=no
+
+[Service]	     
+ ExecStart=/root/UF_IPMC/SRC/IPMC_EXEC
+ Restart=on-failure
+ RestartSec=1s
+
+[Install]
+ WantedBy = multi-user.target      
+      

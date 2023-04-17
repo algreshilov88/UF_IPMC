@@ -55,9 +55,7 @@ ws_alloc( void )
 	IPMI_WS *ws = 0;
 	IPMI_WS *ptr = ws_array;
 	unsigned i;
-	//unsigned int interrupt_mask = CURRENT_INTERRUPT_MASK;
 
-	//DISABLE_INTERRUPTS;
 	for ( i = 0; i < WS_ARRAY_SIZE; i++ )
 	{
 		ptr = &ws_array[i];
@@ -67,7 +65,7 @@ ws_alloc( void )
 			break;
 		}
 	}
-	//ENABLE_INTERRUPTS( interrupt_mask );
+
 	return ws;
 }
 
@@ -92,9 +90,7 @@ ws_get_elem( unsigned state )
 	IPMI_WS *ws = 0;
 	IPMI_WS *ptr = ws_array;
 	unsigned i;
-	//unsigned int interrupt_mask = CURRENT_INTERRUPT_MASK;
 
-	//DISABLE_INTERRUPTS;
 	for ( i = 0; i < WS_ARRAY_SIZE; i++ )
 	{
 		ptr = &ws_array[i];
@@ -112,7 +108,6 @@ ws_get_elem( unsigned state )
 	if( ws )
 		ws->timestamp = lbolt;
 
-	//ENABLE_INTERRUPTS( interrupt_mask );
 	return ws;
 }
 
@@ -122,9 +117,7 @@ ws_get_elem_seq( uchar seq, IPMI_WS *ws_ignore )
 	IPMI_WS *ws = 0;
 	IPMI_WS *ptr = ws_array;
 	unsigned i;
-    //unsigned int interrupt_mask = CURRENT_INTERRUPT_MASK;
 
-	//DISABLE_INTERRUPTS;
 	for ( i = 0; i < WS_ARRAY_SIZE; i++ )
 	{
 		ptr = &ws_array[i];
@@ -135,7 +128,7 @@ ws_get_elem_seq( uchar seq, IPMI_WS *ws_ignore )
 			break;
 		}
 	}
-	//ENABLE_INTERRUPTS( interrupt_mask );
+
 	return ws;
 }
 
@@ -164,12 +157,19 @@ void ws_process_work_list_0( void )
             ws_process_incoming( ws );
     }
 
-	ws = ws_get_elem( WS_ACTIVE_MASTER_WRITE );
+		ws = ws_get_elem( WS_ACTIVE_MASTER_WRITE_PENDING );
+		if( !ws ) {
+			ws = ws_get_elem( WS_ACTIVE_MASTER_WRITE );
+		}
+
 	if( ws ) {
 		ws_set_state( ws, WS_ACTIVE_MASTER_WRITE_PENDING );
 		switch( ws->outgoing_medium ) {
 			case IPMI_CH_MEDIUM_IPMB:
-                		i2c_master_write_0( ws );
+                		if (i2c_master_write_0( ws ) < 0)
+										{
+												i2c_master_write( ws );
+										}
 				break;
 
 			case IPMI_CH_MEDIUM_SERIAL:	/* Asynch. Serial/Modem (RS-232) 	*/
@@ -207,12 +207,19 @@ void ws_process_work_list_1( void )
             ws_process_incoming( ws );
     }
 
-	ws = ws_get_elem( WS_ACTIVE_MASTER_WRITE );
+		ws = ws_get_elem( WS_ACTIVE_MASTER_WRITE_PENDING );
+		if( !ws ) {
+			ws = ws_get_elem( WS_ACTIVE_MASTER_WRITE );
+		}
+
 	if( ws ) {
 		ws_set_state( ws, WS_ACTIVE_MASTER_WRITE_PENDING );
 		switch( ws->outgoing_medium ) {
 			case IPMI_CH_MEDIUM_IPMB:
-                		i2c_master_write_1( ws );
+                		if (i2c_master_write_1( ws ) < 0)
+										{
+												i2c_master_write( ws );
+										}
 				break;
 
 			case IPMI_CH_MEDIUM_SERIAL:	/* Asynch. Serial/Modem (RS-232) 	*/

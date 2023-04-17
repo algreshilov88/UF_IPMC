@@ -145,7 +145,11 @@ ipmi_process_event_req( IPMI_PKT *pkt )
 		case IPMI_SE_CMD_SET_SENSOR_EVENT_ENABLE:
 		case IPMI_SE_CMD_GET_SENSOR_EVENT_ENABLE:
 		case IPMI_SE_CMD_REARM_SENSOR_EVENTS:
+			rearm_sensor_events( pkt );
+			break;
 		case IPMI_SE_CMD_GET_SENSOR_EVENT_STATUS:
+			get_sensor_event_status( pkt );
+			break;
 		case IPMI_SE_CMD_SET_SENSOR_TYPE:
 		case IPMI_SE_CMD_GET_SENSOR_TYPE:
 		case IPMI_SE_CMD_ALERT_IMMEDIATE:

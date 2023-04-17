@@ -35,6 +35,7 @@
 #include "sensor.h"
 #include "toml.h"
 #include "logger.h"
+#include "semaphore.h"
 #include "user-payload.h"
 #include "user-sensor.h"
 #include <stdio.h>
@@ -42,6 +43,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/ioctl.h>
+#include <linux/watchdog.h>
 
 #define MAX_SDR_COUNT		20
 #define MAX_SENSOR_COUNT	20
@@ -49,9 +56,19 @@
 #define ha_offset		0x1220008
 #define qbv_on_off		0x1220000
 
+int wdt_fd;
+
 unsigned int hot_swap_handle_last_state;
 unsigned int fru_ipmb_a_b_last_state = 0x00;
-unsigned int fru_ipmb_a_b_event_set = 0x00;
+unsigned int fru_ipmb_a_b_init_state = 0x00;
+unsigned int fru_ipmb_a_b_event_set = 0x01;
+long long int prototype;
+long long int polarity_bot;
+long long int polarity_top;
+long long int polarity_qsfp;
+long long int pok_en_bot;
+long long int pok_en_top;
+long long int pok_en_qsfp;
 
 extern unsigned long long int lbolt;
 extern FRU_CACHE fru_inventory_cache[];
@@ -96,6 +113,7 @@ void payload_state_poll( unsigned char *arg );
 void fru_hot_swap_state_poll( unsigned char *arg );
 void ipmb_0_state_poll( unsigned char *arg);
 void pok_state_poll( unsigned char *arg );
+void watchdog_state_poll( unsigned char *arg );
 
 unsigned char
 module_get_i2c_address( int address_type )
@@ -116,9 +134,122 @@ module_get_i2c_address( int address_type )
 	}
 }
 
+void sig_handler(int signo)
+{
+        if (signo == SIGQUIT ||
+            signo == SIGTERM ||
+            signo == SIGINT)
+        {
+                ipmb_buffers_disable();
+                //reset_semaphore(ind);
+                exit(EXIT_SUCCESS);
+        }
+
+				if (signo == SIGABRT ||
+						signo == SIGILL  ||
+						signo == SIGFPE  ||
+						signo == SIGHUP  ||
+						signo == SIGSEGV)
+				{
+								ipmb_buffers_disable();
+								//reset_semaphore(ind);
+								exit(EXIT_FAILURE);
+				}
+}
+
+
 /*==============================================================
  * INITIALIZATION
  *==============================================================*/
+void
+ipmb_buffers_enable( void )
+{
+       // ====================================================================
+       // Enable IPMB buffers
+       // ====================================================================
+
+       unsigned int ret;
+
+       ret = reg_read(devmem_ptr, qbv_on_off);
+       ret |= 0x03;
+       reg_write(devmem_ptr, qbv_on_off, ret);
+
+       if ((reg_read(devmem_ptr, qbv_on_off)&0x03) == 0)
+       {
+              reg_write(devmem_ptr, qbv_on_off, ret);
+       }
+
+       if ((reg_read(devmem_ptr, qbv_on_off)&0x03) == 0)
+       {
+                logger("ERROR", "IPMB buffers enable failed!");
+       }
+       else
+       {
+              logger("INFO", "IPMB buffers are enabled");
+       }
+}
+
+void
+ipmb_buffers_disable( void )
+{
+        // ====================================================================
+        // Enable IPMB buffers
+        // ====================================================================
+
+        unsigned int ret;
+
+        ret = reg_read(devmem_ptr, qbv_on_off);
+        ret &= ~0x03;
+        reg_write(devmem_ptr, qbv_on_off, ret);
+
+        if ((reg_read(devmem_ptr, qbv_on_off)&0x03) != 0)
+        {
+              reg_write(devmem_ptr, qbv_on_off, ret);
+        }
+
+        if ((reg_read(devmem_ptr, qbv_on_off)&0x03) != 0)
+        {
+              logger("ERROR", "IPMB buffers disable failed!");
+        }
+        else
+        {
+              logger("INFO", "IPMB buffers are disabled");
+        }
+}
+
+ void
+ watchdog_init( void )
+ {
+         // ====================================================================
+         // initialize the Watchdog Timer
+         // ====================================================================
+
+	 /* set new timeout value 500s
+	 Note the value should be within [10, 500] */
+	 int timeout = 500;
+
+         /* open WDT0 device (WDT0 enables itself automatically) */
+         wdt_fd = open("/dev/watchdog0", O_RDWR);
+         if(wdt_fd < 0) {
+                 logger("ERROR", "Open watchdog device failed!");
+                 exit(EXIT_FAILURE);
+         }
+         else {printf("/dev/watchdog0 opened\n");}
+
+	 /* set timeout */
+	 if (ioctl(wdt_fd, WDIOC_SETTIMEOUT, &timeout) < 0) {
+           	logger("ioctl(WDIOC_SETTIMEOUT) in watchdog_init()", strerror(errno));
+         }
+	 else {printf("New watchdog timeout value set to %d seconds\n", timeout);}
+
+
+	 /* check timeout */
+	 if (ioctl(wdt_fd, WDIOC_GETTIMEOUT, &timeout) < 0) {
+           	logger("ioctl(WDIOC_GETTIMEOUT) in watchdog_init()", strerror(errno));
+         }
+	 else {printf("Checked watchdog timeout value: %d seconds\n", timeout);}
+ }
+
 void
 fru_data_init( void )
 {
@@ -256,6 +387,8 @@ module_init( void )
 {
 	toml_table_t* config;
 	toml_table_t* hdl_m;
+	toml_table_t* prttype;
+	toml_table_t* plrty;
 	toml_raw_t raw;
 	long long int man_handle_status;
 	long long int man_handle_switch;
@@ -284,6 +417,86 @@ module_init( void )
 	if (fclose(fp) < 0) {
 		fclose(fp);
 		perror("fclose() failed");
+	}
+
+	/* Locate the [PROTOTYPE] table. */
+	if (0 == (prttype = toml_table_in(config, "PROTOTYPE"))) {
+		logger("ERROR", "toml_table_in() 'PROTOTYPE' in module_init()");
+	}
+
+	/* Extract 'prototype' config value. */
+	if (0 == (raw = toml_raw_in(prttype, "prototype"))) {
+		logger("ERROR", "toml_raw_in() 'prototype' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &prototype)) {
+		logger("ERROR", "toml_rtoi() 'prototype' in module_init()");
+	}
+
+	/* Extract 'enable_bot' config value. */
+	if (0 == (raw = toml_raw_in(prttype, "init_enable_bot"))) {
+		logger("ERROR", "toml_raw_in() 'init_enable_bot' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &pok_en_bot)) {
+		logger("ERROR", "toml_rtoi() 'pok_en_bot' in module_init()");
+	}
+
+	/* Extract 'enable_top' config value. */
+	if (0 == (raw = toml_raw_in(prttype, "init_enable_top"))) {
+		logger("ERROR", "toml_raw_in() 'init_enable_top' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &pok_en_top)) {
+		logger("ERROR", "toml_rtoi() 'pok_en_top' in module_init()");
+	}
+
+	/* Extract 'qsfp' config value. */
+	if (0 == (raw = toml_raw_in(prttype, "init_enable_qsfp"))) {
+		logger("ERROR", "toml_raw_in() 'init_enable_qsfp' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &pok_en_qsfp)) {
+		logger("ERROR", "toml_rtoi() 'pok_en_qsfp' in module_init()");
+	}
+
+	/* Locate the [POK_CHANGE_POLARITY] table. */
+	if (0 == (plrty = toml_table_in(config, "POK_CHANGE_POLARITY"))) {
+		logger("ERROR", "toml_table_in() 'POK_CHANGE_POLARITY' in module_init()");
+	}
+
+	/* Extract 'bot' config value. */
+	if (0 == (raw = toml_raw_in(plrty, "bot"))) {
+		logger("ERROR", "toml_raw_in() 'bot' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &polarity_bot)) {
+		logger("ERROR", "toml_rtoi() 'polarity_bot' in module_init()");
+	}
+
+	/* Extract 'top' config value. */
+	if (0 == (raw = toml_raw_in(plrty, "top"))) {
+		logger("ERROR", "toml_raw_in() 'top' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &polarity_top)) {
+		logger("ERROR", "toml_rtoi() 'polarity_top' in module_init()");
+	}
+
+	/* Extract 'qsfp' config value. */
+	if (0 == (raw = toml_raw_in(plrty, "qsfp"))) {
+		logger("ERROR", "toml_raw_in() 'qsfp' in module_init()");
+	}
+
+	/* Convert the raw value into an int. */
+	if (toml_rtoi(raw, &polarity_qsfp)) {
+		logger("ERROR", "toml_rtoi() 'polarity_qsfp' in module_init()");
 	}
 
 	/* Locate the [HANDLE_SWITCH_M] table. */
@@ -329,13 +542,15 @@ module_init( void )
 
 	fru_data_init();
 
-	fru[fru_inventory_cache[0].fru_dev_id].state == FRU_STATE_M0_NOT_INSTALLED;
+	fru[fru_inventory_cache[0].fru_dev_id].state = FRU_STATE_M0_NOT_INSTALLED;
 
 	picmg_m1_state( 0 );
 
 	module_sensor_init();
 
 	user_module_sensor_init();
+
+	watchdog_init();
 
 	/*==============================================================*/
 	/* State Poll Functions call																		*/
@@ -346,6 +561,8 @@ module_init( void )
 	fru_hot_swap_state_poll( 0 );
 
 	ipmb_0_state_poll( 0 );
+
+	watchdog_state_poll( 0 );
 
 	user_sensor_state_poll();
 
@@ -1881,11 +2098,12 @@ read_ipmb_0_status( void )
 
 	unsigned int status_0;
 	unsigned int status_1;
+	unsigned int ret;
 
 	status_0 = (reg_read(devmem_ptr, ha_offset)>>8)&0x01;
 	status_1 = (reg_read(devmem_ptr, ha_offset)>>9)&0x01;
 
-	if ( fru_ipmb_a_b_event_set )
+	if ( !fru_ipmb_a_b_event_set )
 	{
 		if ( sd[2].ipmb_a_enabled_ipmb_b_disabled == 1 )
 		{
@@ -1898,8 +2116,6 @@ read_ipmb_0_status( void )
 			status_0 = 0;
 			status_1 = 1;
 		}
-
-		fru_ipmb_a_b_event_set = 0;
 	}
 
 	sd[2].std_ipmi_byte = 0xC0;
@@ -1907,21 +2123,21 @@ read_ipmb_0_status( void )
 	if (status_0)
 	{
 		sd[2].ipmb_a_local_status = 0;
-		sd[2].ipmb_a_override_state = 1;
+		sd[2].ipmb_a_override_state = fru_ipmb_a_b_event_set;
 	} else
 	{
 		sd[2].ipmb_a_local_status = 0x07;
-		sd[2].ipmb_a_override_state = 0;
+		sd[2].ipmb_a_override_state = fru_ipmb_a_b_event_set;
 	}
 
 	if (status_1)
 	{
 		sd[2].ipmb_b_local_status = 0;
-		sd[2].ipmb_b_override_state = 1;
+		sd[2].ipmb_b_override_state = fru_ipmb_a_b_event_set;
 	} else
 	{
 		sd[2].ipmb_b_local_status = 0x07;
-		sd[2].ipmb_b_override_state = 0;
+		sd[2].ipmb_b_override_state = fru_ipmb_a_b_event_set;
 	}
 
 	if (status_0)
@@ -1931,15 +2147,28 @@ read_ipmb_0_status( void )
 			sd[2].ipmb_a_enabled_ipmb_b_enabled = 1;
 			msg.offset = 0x03;
 			msg.evt_direction = 0x6F;
+
+			if (fru_ipmb_a_b_last_state != 1)
+			{
+				fru_ipmb_a_b_last_state = 1;
+				fru_ipmb_a_b_init_state = 1;
+			} else
+			{
+				fru_ipmb_a_b_init_state = 0;
+			}
 		} else
 		{
 			sd[2].ipmb_a_enabled_ipmb_b_disabled = 1;
 			msg.offset = 0x01;
 			msg.evt_direction = 0x6F;
 
-			if (!fru_ipmb_a_b_last_state)
+			if (fru_ipmb_a_b_last_state != 2)
 			{
-				fru_ipmb_a_b_last_state = 1;
+				fru_ipmb_a_b_last_state = 2;
+				fru_ipmb_a_b_init_state = 1;
+			} else
+			{
+				fru_ipmb_a_b_init_state = 0;
 			}
 		}
 	} else
@@ -1950,9 +2179,13 @@ read_ipmb_0_status( void )
 			msg.offset = 0x02;
 			msg.evt_direction = 0x6F;
 
-			if (!fru_ipmb_a_b_last_state)
+			if (fru_ipmb_a_b_last_state != 3)
 			{
-				fru_ipmb_a_b_last_state = 1;
+				fru_ipmb_a_b_last_state = 3;
+				fru_ipmb_a_b_init_state = 1;
+			} else
+			{
+				fru_ipmb_a_b_init_state = 0;
 			}
 		} else
 		{
@@ -1960,9 +2193,13 @@ read_ipmb_0_status( void )
 			msg.offset = 0x00;
 			msg.evt_direction = 0x6F;
 
-			if (!fru_ipmb_a_b_last_state)
+			if (fru_ipmb_a_b_last_state != 4)
 			{
-				fru_ipmb_a_b_last_state = 1;
+				fru_ipmb_a_b_last_state = 4;
+				fru_ipmb_a_b_init_state = 1;
+			} else
+			{
+				fru_ipmb_a_b_init_state = 0;
 			}
 		}
 	}
@@ -1981,23 +2218,44 @@ read_ipmb_0_status( void )
 	msg.ipmb_b_local_status = sd[2].ipmb_b_local_status;
 	msg.ipmb_b_override_state = sd[2].ipmb_b_override_state;
 
-	if (sd[2].ipmb_a_enabled_ipmb_b_enabled && fru_ipmb_a_b_last_state)
+	if (sd[2].ipmb_a_enabled_ipmb_b_enabled && fru_ipmb_a_b_last_state == 1 && fru_ipmb_a_b_init_state == 1)
 	{
+		ret = reg_read(devmem_ptr, qbv_on_off);
+		ret |= 0x03;
+		reg_write(devmem_ptr, qbv_on_off, ret);
 		ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_IPMB_0_EVENT_MSG_REQ), 0);
-		fru_ipmb_a_b_last_state = 0;
 	}
 
-	if (sd[2].ipmb_a_enabled_ipmb_b_disabled
-	    || sd[2].ipmb_a_disabled_ipmb_b_enabled
-	    || sd[2].ipmb_a_disabled_ipmb_b_disabled)
+	if (sd[2].ipmb_a_enabled_ipmb_b_disabled && fru_ipmb_a_b_last_state == 2 && fru_ipmb_a_b_init_state == 1)
 	{
+		ret = reg_read(devmem_ptr, qbv_on_off);
+		ret |= 0x01;
+		reg_write(devmem_ptr, qbv_on_off, ret);
 		ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_IPMB_0_EVENT_MSG_REQ), 0);
+	}
+
+	if (sd[2].ipmb_a_disabled_ipmb_b_enabled && fru_ipmb_a_b_last_state == 3 && fru_ipmb_a_b_init_state == 1)
+	{
+		ret = reg_read(devmem_ptr, qbv_on_off);
+		ret |= 0x02;
+		reg_write(devmem_ptr, qbv_on_off, ret);
+		ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_IPMB_0_EVENT_MSG_REQ), 0);
+	}
+
+	if (sd[2].ipmb_a_disabled_ipmb_b_disabled && fru_ipmb_a_b_last_state == 4 && fru_ipmb_a_b_init_state == 1)
+	{
+		ret = reg_read(devmem_ptr, qbv_on_off);
+		ret &= ~0x03;
+		reg_write(devmem_ptr, qbv_on_off, ret);
+		//ipmi_send_event_req(( unsigned char * )&msg, sizeof(FRU_IPMB_0_EVENT_MSG_REQ), 0);
 	}
 
 	sd[2].ipmb_a_enabled_ipmb_b_enabled = 0;
 	sd[2].ipmb_a_enabled_ipmb_b_disabled = 0;
 	sd[2].ipmb_a_disabled_ipmb_b_enabled = 0;
 	sd[2].ipmb_a_disabled_ipmb_b_disabled = 0;
+
+	fru_ipmb_a_b_event_set = 1;
 }
 
 void
@@ -2022,4 +2280,27 @@ read_hot_swap_handle( void )
 	sd[3].sensor_scanning_enabled = 1;
 	sd[3].event_messages_enabled = 1;
 	sd[3].unavailable = 0;
+	sd[3].current_state_mask = 0;
+}
+
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
++               Watchdog Timer Handler                                +
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+void
+watchdog_ping( void )
+{
+        if (ioctl(wdt_fd, WDIOC_KEEPALIVE, NULL) < 0) {
+                logger("ioctl(WDIOC_KEEPALIVE) in watchdog_ping()", strerror(errno));
+        }
+}
+void
+watchdog_state_poll( unsigned char *arg )
+{
+        unsigned char watchdog_timer_handle;
+
+        watchdog_ping();
+
+        // Re-start the timer
+        timer_add_callout_queue( (void *)&watchdog_timer_handle,
+                        3*SEC, watchdog_state_poll, 0 ); /* 3 sec timeout */
 }

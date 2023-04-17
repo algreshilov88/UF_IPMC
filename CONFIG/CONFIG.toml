@@ -1,24 +1,29 @@
 #IPMC CONFIG
 
 [I2C_ADAPTERS]
-i2c_cadence = 7				#i2c cadence adapter number for IPMC-Shelf Manager exchange
-i2c_xilinx = 5				#i2c xilinx adapter number for IPMC-Shelf Manager exchange
+i2c_cadence = 0				#i2c cadence adapter number for IPMC-Shelf Manager exchange
 
 [I2C_SENSORS]
-i2c_sensor = [4,1,2]			#i2c sensor adapter number array (for sensor reading)
+i2c_sensor = [2,3,4]			#i2c sensor adapter number array (for sensor reading)
 
 [PAYLOAD_M]
 man_payload_status = 0			#enable/disable MANUAL management: 1 = ON, 0 = OFF.
 man_payload = 0				#payload: 1 = ON, 0 = OFF.
+
+[POK_CHANGE_POLARITY]
+bot = 0
+top = 0
+qsfp = 0
+
+[PROTOTYPE]
+prototype = 1             # 0 - No, 1 - Yes
+init_enable_bot = 0       # Initial state (modules with incorrect POK logic should be set as "Inactive"): 0 - "Inactive", 1 - "Active"
+init_enable_top = 0       # Initial state (modules with incorrect POK logic should be set as "Inactive"): 0 - "Inactive", 1 - "Active"
+init_enable_qsfp = 0      # Initial state (modules with incorrect POK logic should be set as "Inactive"): 0 - "Inactive", 1 - "Active"
 
 [HANDLE_SWITCH_M]
 man_handle_status = 0			#enable/disable MANUAL management: 1 = ON, 0 = OFF.
 man_handle_switch = 1			#handle switch: 0 = CLOSED, 1 = OPENED.
 
 [POWER_DRAW]
-desired_steady_state = 0xC8		#desired power draw  = 200 Watts 
-
-
-
-
-
+desired_steady_state = 0xC8		#desired power draw  = 200 Watts

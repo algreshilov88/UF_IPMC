@@ -22,6 +22,7 @@
 */
 #include "toml.h"
 #include "logger.h"
+#include "i2c-sensor.h"
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -37,8 +38,6 @@
 #include <sys/ioctl.h>
 
 #define MAX_SENSOR_COUNT	20
-
-typedef unsigned char   u8;
 
 /*==============================================================
  * i2c_sensor_initialize()
@@ -181,7 +180,6 @@ void i2c_sensor_deinitialize( void )
 
 // Write to an I2C slave device's register:
 int i2c_write(int i2c_fd_snsr, u8 slave_addr, u8 reg, u8 data) {
-    int retval;
     long funcs;
     u8 outbuf[2];
 
@@ -218,7 +216,6 @@ int i2c_write(int i2c_fd_snsr, u8 slave_addr, u8 reg, u8 data) {
 
 // Read the given I2C slave device's register and return the read value in `*result`:
 int i2c_read(int i2c_fd_snsr, u8 slave_addr, u8 reg, u8 *result) {
-    int retval;
     long funcs;
     u8 outbuf[1], inbuf[1];
     struct i2c_msg msgs[2];
@@ -259,5 +256,176 @@ int i2c_read(int i2c_fd_snsr, u8 slave_addr, u8 reg, u8 *result) {
     }
 
     *result = inbuf[0];
+    return 0;
+}
+
+// Write into PI4IOE5V96224ZLEX register, 3 data bytes and no address
+int i2c_write_qsfp30(int i2c_fd_bus, u8 i2c_chip_addr, u8 data[3])
+{
+    long funcs;
+    u8 outbuf[3];
+
+    struct i2c_msg msgs[1];
+    struct i2c_rdwr_ioctl_data msgset[1];
+
+    if (ioctl(i2c_fd_bus, I2C_FUNCS, &funcs) < 0)
+		{
+		//perror("ioctl(I2C_FUNCS) in i2c_write_qsfp2()");
+		logger("ioctl(I2C_FUNCS) in i2c_write_qsfp2()", strerror(errno));
+		return (-1);
+		}
+
+    assert(funcs & I2C_FUNC_I2C);
+
+    outbuf[0] = data[0];
+    outbuf[1] = data[1];
+    outbuf[2] = data[2];
+
+    msgs[0].addr = i2c_chip_addr;
+    msgs[0].flags = 0;
+    msgs[0].len = 3;
+    msgs[0].buf = outbuf;
+
+    msgset[0].msgs = msgs;
+    msgset[0].nmsgs = 1;
+
+    if (ioctl(i2c_fd_bus, I2C_RDWR, &msgset) < 0) {
+        //perror("ioctl(I2C_RDWR) in i2c_write_qsfp2()");
+				logger("ioctl(I2C_RDWR) in i2c_write_qsfp2()", strerror(errno));
+        return (-1);
+    }
+
+    return 0;
+}
+
+/* TO FIX
+int i2c_read_qsfp30(int i2c_fd_bus, u8 i2c_chip_addr, u8 *result) {
+    long funcs;
+    u8 inbuf[3];
+    struct i2c_msg msgs[2];
+    struct i2c_rdwr_ioctl_data msgset[1];
+
+    if (ioctl(i2c_fd_bus, I2C_FUNCS, &funcs) < 0)
+		{
+		//perror("ioctl(I2C_FUNCS) in i2c_read_qsfp2()");
+		logger("ioctl(I2C_FUNCS) in i2c_read_qsfp2()", strerror(errno));
+		return (-1);
+		}
+
+    assert(funcs & I2C_FUNC_I2C);
+
+
+    msgs[0].addr = i2c_chip_addr;
+    //msgs[1].flags = I2C_M_RD | I2C_M_NOSTART;
+    msgs[0].flags = I2C_M_RD;
+    msgs[0].len = 3;
+    msgs[0].buf = inbuf;
+
+    msgset[0].msgs = msgs;
+    msgset[0].nmsgs = 1;
+
+    inbuf[0] = 0;
+    inbuf[1] = 0;
+    inbuf[2] = 0;
+
+    *result = 0;
+    if (ioctl(i2c_fd_bus, I2C_RDWR, &msgset) < 0) {
+    		// perror("ioctl(I2C_RDWR) in i2c_read_qsfp2()");
+				logger("ioctl(I2C_FUNCS) in i2c_read_qsfp2()", strerror(errno));
+        return (-1);
+    }
+
+    result[0] = inbuf[0];
+    result[1] = inbuf[1];
+    result[2] = inbuf[2];
+    return 0;
+}
+*/
+
+// Write to an PMBus slave device's register (for DSE0133V2NBC):
+int pmbus_byte_write(int i2c_fd_snsr, u8 slave_addr, u8 reg, u8 data) {
+	long funcs;
+	u8 outbuf[2];
+
+	struct i2c_msg msgs[1];
+	struct i2c_rdwr_ioctl_data msgset[1];
+
+	if (ioctl(i2c_fd_snsr, I2C_FUNCS, &funcs) < 0) {
+			//perror("ioctl(I2C_FUNCS) in i2c_write");
+			logger("ioctl(I2C_FUNCS) in pmbus_byte_write()", strerror(errno));
+			return (-1);
+	}
+
+	assert(funcs & I2C_FUNC_I2C);
+
+	outbuf[0] = reg;
+	outbuf[1] = data;
+
+	msgs[0].addr = slave_addr;
+	msgs[0].flags = 0;
+	msgs[0].len = 2;
+	msgs[0].buf = outbuf;
+
+	msgset[0].msgs = msgs;
+	msgset[0].nmsgs = 1;
+
+	if (ioctl(i2c_fd_snsr, I2C_RDWR, &msgset) < 0) {
+			//perror("ioctl(I2C_RDWR) in i2c_write");
+			logger("ioctl(I2C_RDWR) in pmbus_byte_write()", strerror(errno));
+			return (-1);
+	}
+
+	return 0;
+}
+
+// Read the given PMBus slave device's register and return the read value in `*result` (for DSE0133V2NBC, PIM400KZ):
+int pmbus_two_bytes_read(int i2c_fd_snsr, u8 slave_addr, u8 reg, u16 *result) {
+    long funcs;
+    u8 outbuf[1];
+    struct i2c_msg msgs[2];
+    struct i2c_rdwr_ioctl_data msgset[1];
+		union inbuf
+		{
+		    unsigned short int inbuf16;
+		    unsigned char  inbuf8[2];
+		} inbuf;
+
+    if (ioctl(i2c_fd_snsr, I2C_FUNCS, &funcs) < 0) {
+				//perror("ioctl(I2C_FUNCS) in i2c_read");
+				logger("ioctl(I2C_FUNCS) in pmbus_two_bytes_read()", strerror(errno));
+				return (-1);
+    }
+
+    assert(funcs & I2C_FUNC_I2C);
+
+
+    msgs[0].addr = slave_addr;
+    msgs[0].flags = 0;
+    msgs[0].len = 1;
+    msgs[0].buf = outbuf;
+
+    msgs[1].addr = slave_addr;
+    //msgs[1].flags = I2C_M_RD | I2C_M_NOSTART;
+    msgs[1].flags = I2C_M_RD;
+    msgs[1].len = 2;
+    msgs[1].buf = inbuf.inbuf8;
+
+    msgset[0].msgs = msgs;
+    msgset[0].nmsgs = 2;
+
+    outbuf[0] = reg;
+
+    inbuf.inbuf8[0] = 0;
+		inbuf.inbuf8[1] = 0;
+
+    *result = 0;
+    if (ioctl(i2c_fd_snsr, I2C_RDWR, &msgset) < 0) {
+        //perror("ioctl(I2C_RDWR) in i2c_read");
+				logger("ioctl(I2C_RDWR) in pmbus_two_bytes_read()", strerror(errno));
+        return (-1);
+    }
+
+    *result = inbuf.inbuf16;
+
     return 0;
 }

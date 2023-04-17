@@ -31,6 +31,7 @@
 #include "picmg.h"
 #include "toml.h"
 #include <unistd.h>
+#include <signal.h>
 
 extern unsigned long long int lbolt;
 
@@ -41,11 +42,22 @@ int main()
 {
 	unsigned long time;
 
+
+  signal(SIGQUIT, sig_handler);
+  signal(SIGTERM, sig_handler);
+  signal(SIGABRT, sig_handler);
+  signal(SIGFPE, sig_handler);
+  signal(SIGILL, sig_handler);
+  signal(SIGSEGV, sig_handler);
+  signal(SIGHUP, sig_handler);
+  signal(SIGINT, sig_handler);
+
 	/* Initialize system */
 	ws_init();
 	timer_initialize();
 	semaphore_initialize();
 	i2c_initialize();
+	ipmb_buffers_enable();
 	i2c_sensor_initialize();
 	module_init();
 
@@ -69,4 +81,5 @@ int main()
 
 	i2c_deinitialize();
 	i2c_sensor_deinitialize();
+	ipmb_buffers_disable();
 }

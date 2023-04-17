@@ -20,6 +20,9 @@
     You should have received a copy of the GNU General Public License
     along with UF_IPMC.  If not, see <https://www.gnu.org/licenses/>.
 */
+void sig_handler(int signo);
+void ipmb_buffers_enable( void );
+void ipmb_buffers_disable( void );
 void module_init( void );
 void module_cold_reset( unsigned char dev_id );
 void module_warm_reset( unsigned char dev_id );
@@ -34,7 +37,9 @@ void module_led_off( unsigned led_state );
 void module_process_response( IPMI_WS *req_ws, unsigned char seq, unsigned char completion_code );
 void module_sensor_init( void );
 void module_rearm_events( void );
+void watchdog_init( void );
 void fru_data_init( void );
 void read_fru_hot_swap( void );
 void read_ipmb_0_status( void );
 void read_hot_swap_handle( void );
+void watchdog_ping( void );

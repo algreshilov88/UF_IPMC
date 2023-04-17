@@ -1,13 +1,9 @@
 #include "i2c-sensor.h"
-
+#include <stdio.h>
 #define MACHXO2_ADDR 0x69
 #define OPTICAL_ADDR 0x42
 
-//twos complement converter
-int twos_complement(int val,u8 bits);
-
-
-
+#define OCTOPUS_I2C_BUS 0x00
 
 //Those command here reads from one of the MACH XO2 buses
 //octopus_bus can be 
@@ -20,26 +16,19 @@ int twos_complement(int val,u8 bits);
 #define SOUTH_BUS   0x1
 #define CLOCK_BUS   0x2
 #define OPTICAL_BUS 0x3
+#define OPTICS_BUS  0x4
 
+int twos_complement(int val,u8 bits);
 int i2c_read_octopus_bus(int i2c_fd_snsr, u8 octopus_bus,u8 slave_addr, u8 reg, u8 *result,u8 reg16b);
 int i2c_read_word_octopus_bus(int i2c_fd_snsr, u8 octopus_bus,u8 slave_addr, u8 reg, int *result,u8 reg16b);
 int i2c_write_octopus_bus(int i2c_fd_snsr,u8 octopus_bus,u8 slave_addr, u8 reg, u8 data,u8 reg16b); 
 
 
 //Those two functions are talking to the optiocal module groups
-//optical_bus can be
-// Group 0 -->0x1
-// Group 1 -->0x2
-// Group 2 -->0x4
-// Group 3 -->0x8
-// Group 4 -->0x10
-// Monitoring -->0x20
-#define OPTICAL_G0_BUS    0x1
-#define OPTICAL_G1_BUS    0x2
-#define OPTICAL_G2_BUS    0x4
-#define OPTICAL_G3_BUS    0x8
-#define OPTICAL_G4_BUS    0x10
-#define OPTICAL_MON_BUS   0x20
+#define OPTICAL_BUS_0     0x0
+#define OPTICAL_BUS_1     0x1
+#define OPTICAL_BUS_2     0x2
+
 
 
 int i2c_read_optical_bus(int i2c_fd_snsr, u8 optical_bus,u8 slave_addr, u8 reg, u8 *result,u8 reg16b);
@@ -61,12 +50,11 @@ int i2c_write_optical_bus(int i2c_fd_snsr,u8 optical_bus,u8 slave_addr, u8 reg, 
 #define RAIL_1V2_MGTAVTT_VUP_N    2 
 #define RAIL_0V9_MGTAVCC_VUP_S   3
 #define RAIL_1V2_MGTAVTT_VUP_S    4
-#define RAIL_OPTICAL_3V3_G0   7
-#define RAIL_OPTICAL_3V3_G1   8
-#define RAIL_OPTICAL_3V3_G2   9
-#define RAIL_OPTICAL_3V3_G3   10
-#define RAIL_OPTICAL_3V3_G4   11
-
+#define RAIL_3V3_OPTICAL_G0   7
+#define RAIL_3V3_OPTICAL_G1   8
+#define RAIL_3V3_OPTICAL_G2   9
+#define RAIL_3V3_OPTICAL_G3   10
+#define RAIL_3V3_OPTICAL_G4   11
 #define RAIL_0V85_VCCINT_VUP 29
 
 //those have V and I +above rails
@@ -97,36 +85,17 @@ int i2c_write_optical_bus(int i2c_fd_snsr,u8 optical_bus,u8 slave_addr, u8 reg, 
 
 
 
-void activate_vcc_int_channel(int i2c_fd_snsr,u8 addr,u8 channel);
-void deactivate_vcc_int_channel(int i2c_fd_snsr,u8 addr,u8 channel);
-
 
 
 
 //temperature. sensor from above , num is the number of the regulator or FPGA if there are more
-float  readTemperature(int i2c_fd_snsr,u8 sensor,u8 number,u8 local);
-//set interrupt thresholds for temperature! Needed during power up!
-//takes a local and a remote threshold
-void  configure_temperature_sensors(int i2c_fd_snsr,u8 sensor,u8 number,u8 local,u8 remote);
-
-float  readVoltage(int i2c_fd_snsr,u8 sensor);
-void power_up_octopus(int i2c_fd_snsr);
+u8 power_up_octopus(int i2c_fd_snsr,u8 timeout);
 void power_down_octopus(int i2c_fd_snsr);
-void power_up_qsfpdd_module(int i2c_fd_snsr);
+u8 power_up_qsfpdd_module(int i2c_fd_snsr,u8 timeout);
 void power_down_qsfpdd_module(int i2c_fd_snsr);
-void emergency_power_down_octopus(int i2c_fd_snsr);
-void emergency_power_down_qsfpdd_module(int i2c_fd_snsr);
-void check_rail(int i2c_fd_snsr,u8 sensor,float min,float max);
-
-void configure_octopus_voltage_sensors(int i2c_fd_snsr);
-void configure_qsfpdd_voltage_sensors(int i2c_fd_snsr);
-
-void configure_optical_io(int i2c_fd_snsr);
-int detect_optics(int i2c_fd_snsr);
-void update_leds(int i2c_fd_snsr,int original,int current);
-
-
-u8 select_qsfpdd_module(int i2c_fd_snsr,u8 cage);
-void write_qsfpdd_module(int i2c_fd_snsr,u8 cage,u8 addr,u8 data);
-u8 read_qsfpdd_module(int i2c_fd_snsr,u8 cage,u8 addr);
-float qsfpddTemperature(int i2c_fd_snsr);
+int optics_temperature(int i2c_fd_snsr,int mask);
+void  configure_octopus(int i2c_fd_snsr);
+void  configure_qsfpdd_module(int i2c_fd_snsr);
+int optics_presence(int i2c_fd_snsr);
+void set_led(int i2c_fd_snsr,u8 cage,u8 r,u8 g,u8 b);
+int optics_powered;

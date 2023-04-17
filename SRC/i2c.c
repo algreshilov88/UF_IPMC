@@ -46,7 +46,8 @@
 #include <string.h>
 #include <time.h>
 
-#define MAX_DELIVERY_ATTEMPTS 1
+#define MAX_DELIVERY_ATTEMPTS 3
+#define I2C_MASTER_COUNT 	  1
 
 #define MAP_SIZE 4096UL
 //#define MAP_MASK (MAP_SIZE - 1)
@@ -56,11 +57,7 @@
 
 #define base_addr	0x00
 
-#define set_MS_0 	0x1200000
-#define valid_MS_0 	0x1200004
-
-#define set_MS_1 	0x1210000
-#define valid_MS_1 	0x1210004
+#define set_MS 	0x1200000
 
 /*==============================================================*/
 /* Local Variables						*/
@@ -86,8 +83,7 @@ void i2c_slave_complete( void *ws, unsigned int status );
 /*==============================================================
  * i2c_initialize()
  *==============================================================*/
-int i2c_fd_0;
-int i2c_fd_1;
+int i2c_fd;
 int devmem_fd;
 void *devmem_ptr;
 
@@ -98,9 +94,7 @@ void i2c_initialize( void )
 	toml_array_t* arr;
 	toml_raw_t raw;
 	long long int i2c_cadence;
-	long long int i2c_xilinx;
-	char I2C_ADAPTER_0[20];
-	char I2C_ADAPTER_1[20];
+	char I2C_ADAPTER[20];
 
 	FILE* fp;
 	char errbuf[1000];
@@ -140,32 +134,14 @@ void i2c_initialize( void )
 		logger("ERROR", "toml_rtoi() 'i2c_cadence' in i2c_initialize()");
 	}
 
-	/* Extract 'i2c_xilinx' config value. */
-	if (0 == (raw = toml_raw_in(adptr_num, "i2c_xilinx"))) {
-		logger("ERROR", "toml_raw_in() 'i2c_xilinx' in i2c_initialize()");
-	}
+	snprintf(I2C_ADAPTER, 19, "/dev/i2c-%d", (int) i2c_cadence);
 
-	/* Convert the raw value into an int. */
-	if (toml_rtoi(raw, &i2c_xilinx)) {
-		logger("ERROR", "toml_rtoi() 'i2c_xilinx' in i2c_initialize()");
-	}
-
-	snprintf(I2C_ADAPTER_0, 19, "/dev/i2c-%d", (int) i2c_cadence);
-	snprintf(I2C_ADAPTER_1, 19, "/dev/i2c-%d", (int) i2c_xilinx);
-
-	if ((i2c_fd_0 = open(I2C_ADAPTER_0, O_RDWR | O_NONBLOCK)) < 0)
+	if ((i2c_fd = open(I2C_ADAPTER, O_RDWR | O_NONBLOCK)) < 0)
   {
       //perror("open /dev/i2c-cadence");
 			logger("open /dev/i2c-cadence", strerror(errno));
   }
   else{printf("/dev/i2c-cadence opened \n");}
-
-	if ((i2c_fd_1 = open(I2C_ADAPTER_1, O_RDWR | O_NONBLOCK)) < 0)
-  {
-      //perror("open /dev/i2c-xilinx");
-			logger("open /dev/i2c-xilinx", strerror(errno));
-  }
-  else{printf("/dev/i2c-xilinx opened \n");}
 
   if ((devmem_fd = open("/dev/mem", O_RDWR | O_SYNC)) < 0)
   {
@@ -191,16 +167,10 @@ void i2c_initialize( void )
 
 void i2c_deinitialize( void )
 {
-	if ((close(i2c_fd_0)) < 0)
+	if ((close(i2c_fd)) < 0)
   {
 		//perror("Close i2c_fd_0");
-		logger("Close i2c_fd_0", strerror(errno));
-  }
-
-	if ((close(i2c_fd_1)) < 0)
-  {
-		//perror("Close i2c_fd_1");
-		logger("Close i2c_fd_1", strerror(errno));
+		logger("Close i2c_fd", strerror(errno));
   }
 
 	if ((close(devmem_fd)) < 0)
@@ -237,9 +207,11 @@ i2c_slave_read_0( void )
     unsigned int reg = 0x00;
     unsigned int pkg_size;
     unsigned int i;
+		unsigned int ret;
 
-    reg_write(devmem_ptr, set_MS_0, 1);
-    reg_write(devmem_ptr, valid_MS_0, 0);
+		ret = reg_read(devmem_ptr, set_MS);
+		ret &= ~0x01;
+    reg_write(devmem_ptr, set_MS, ret);
 
     dputstr( DBG_I2C | DBG_INOUT, "i2c_slave_read_0: ingress\n" );
     if( !( ws = ws_alloc() ) ) {
@@ -266,7 +238,7 @@ i2c_slave_read_0( void )
            	reg = reg + 0x004;
            	ws->pkt_in[i] = reg_read(devmem_ptr, reg);
 	   		ws->i2c_channel = 0;
-	   		printf("data_rcv_0 = 0x%x\n\r", (unsigned int) ws->pkt_in[i]);
+	   		//printf("data_rcv_0 = 0x%x\n\r", (unsigned int) ws->pkt_in[i]);
        	}
 
 				i2c_slave_complete( (void *)ws, 0 );
@@ -289,9 +261,11 @@ i2c_slave_read_1( void )
     unsigned int reg = 0x2000000;
     unsigned int pkg_size;
     unsigned int i;
+		unsigned int ret;
 
-    reg_write(devmem_ptr, set_MS_1, 1);
-    reg_write(devmem_ptr, valid_MS_1, 0);
+		ret = reg_read(devmem_ptr, set_MS);
+		ret &= ~0x01;
+    reg_write(devmem_ptr, set_MS, ret);
 
     dputstr( DBG_I2C | DBG_INOUT, "i2c_slave_read_0: ingress\n" );
     if( !( ws = ws_alloc() ) ) {
@@ -318,7 +292,7 @@ i2c_slave_read_1( void )
            	reg = reg + 0x004;
            	ws->pkt_in[i] = reg_read(devmem_ptr, reg);
 	   				ws->i2c_channel = 1;
-	   				printf("data_rcv_1 = 0x%x\n\r", (unsigned int) ws->pkt_in[i]);
+	   				//printf("data_rcv_1 = 0x%x\n\r", (unsigned int) ws->pkt_in[i]);
        	}
 
 		i2c_slave_complete( (void *)ws, 0 );
@@ -339,27 +313,26 @@ i2c_slave_read_1( void )
  * 	Gets called by ws_process_work_list() when we find a ws with state
  * 	WS_ACTIVE_MASTER_WRITE_PENDING in the work list.
  */
-void
+int
 i2c_master_write_0( IPMI_WS *ws )
 {
     long funcs;
     unsigned int i, n;
+		unsigned int ret;
+		unsigned char outbuf[ws->len_out];
 
     struct i2c_msg msgs[1];
     struct i2c_rdwr_ioctl_data msgset[1];
 
-    reg_write(devmem_ptr, set_MS_0, 0);
-    reg_write(devmem_ptr, valid_MS_0, 1);
-
-    if (ioctl(i2c_fd_0, I2C_FUNCS, &funcs) < 0)
+    if (ioctl(i2c_fd, I2C_FUNCS, &funcs) < 0)
     {
-        //perror("ioctl(I2C_FUNCS) in i2c_master_write");
-				logger("ioctl(I2C_FUNCS) in i2c_master_write", strerror(errno));
+        //perror("ioctl(I2C_FUNCS) in i2c_master_write_0()");
+				logger("ioctl(I2C_FUNCS) in i2c_master_write_0()", strerror(errno));
     }
 
     assert(funcs & I2C_FUNC_I2C);
 
-    dputstr( DBG_I2C | DBG_INOUT, "i2c_master_write: ingress\n" );
+    dputstr( DBG_I2C | DBG_INOUT, "i2c_master_write_0(): ingress\n" );
 
     /* fill in the ws struct & the data buf */
     ws->outgoing_protocol = IPMI_CH_PROTOCOL_IPMB;
@@ -370,32 +343,43 @@ i2c_master_write_0( IPMI_WS *ws )
     msgs[0].addr = remote_i2c_address/2;
     msgs[0].flags = 0;
     msgs[0].len = ws->len_out;
-    if ((msgs[0].buf = (unsigned char *)malloc(ws->len_out+1)) == NULL)
+    /*if ((msgs[0].buf = (unsigned char *)malloc(ws->len_out+1)) == NULL)
 		{
 				logger("ERROR", "malloc() failed in i2c_master_write_0()");
 				exit(EXIT_FAILURE);
-		}
+		}*/
 
     for (i=0; i<=ws->len_out; i++) {
-        msgs[0].buf[i] = ws->pkt_out[i];
+        //msgs[0].buf[i] = ws->pkt_out[i];
+				outbuf[i] = ws->pkt_out[i];
     }
 
+		msgs[0].buf = outbuf;
+
     for (n=0; n<=ws->len_out; n++) {
-    		printf("data_sent_0 = %x\n\r", (unsigned int) msgs[0].buf[n]);
+    		//printf("data_sent_0 = %x\n\r", (unsigned int) msgs[0].buf[n]);
     }
 
     msgset[0].msgs = msgs;
     msgset[0].nmsgs = 1;
 
-    if (ioctl(i2c_fd_0, I2C_RDWR, &msgset) < 0)
+		ret = reg_read(devmem_ptr, set_MS);
+		ret |= 0x01;
+    reg_write(devmem_ptr, set_MS, ret);
+
+    if (ioctl(i2c_fd, I2C_RDWR, &msgset) < 0)
     {
-        perror("ioctl(I2C_RDWR) in i2c_master_write");
+				ret = reg_read(devmem_ptr, set_MS);
+				ret &= ~0x01;
+	    	reg_write(devmem_ptr, set_MS, ret);
+
+        perror("ioctl(I2C_RDWR) in i2c_master_write_0()");
 
 				//logger("i2c-cadence master write error", strerror(errno));
 
 				//usleep(100000);
 
-				if (errno != EBUSY && errno != EAGAIN) {
+				/*if (errno != EBUSY && errno != EAGAIN) {
 						if (msgs[0].buf != NULL)
 						{
 								free(msgs[0].buf);
@@ -403,51 +387,57 @@ i2c_master_write_0( IPMI_WS *ws )
 						}
 
 						i2c_master_write_0( ws );
-				} else {
-						if (msgs[0].buf != NULL)
+				} else {*/
+						/*if (msgs[0].buf != NULL)
 						{
 								free(msgs[0].buf);
 								msgs[0].buf = NULL;
-						}
+						}*/
 
-						i2c_master_write_1( ws );
-				}
+						//i2c_master_write_1( ws );
+						return -1;
+				//}
     } else {
+				ret = reg_read(devmem_ptr, set_MS);
+				ret &= ~0x01;
+				reg_write(devmem_ptr, set_MS, ret);
+
 				if (ws->pkt_out[0] == 0x14 && ws->pkt_out[4] == 0x00) {
-						logger("Event Message","Set Event Receiver(Events Rearming)");
+					logger("Event Message","Set Event Receiver(Events Rearming)");
 				}
+
 				i2c_master_complete( (void *)ws, 0 );
-				//printf("i2c_msg_sent \n");
+		//printf("i2c_msg_sent \n");
     }
 
-		if (msgs[0].buf != NULL)
+		/*if (msgs[0].buf != NULL)
 		{
 				free(msgs[0].buf);
 				msgs[0].buf = NULL;
-		}
+		}*/
+		return 0;
 }
 
-void
+int
 i2c_master_write_1( IPMI_WS *ws )
 {
     long funcs;
     unsigned int i, n;
+		unsigned int ret;
+		unsigned char outbuf[ws->len_out];
 
     struct i2c_msg msgs[1];
     struct i2c_rdwr_ioctl_data msgset[1];
 
-    reg_write(devmem_ptr, set_MS_1, 0);
-    reg_write(devmem_ptr, valid_MS_1, 1);
-
-    if (ioctl(i2c_fd_1, I2C_FUNCS, &funcs) < 0)
+    if (ioctl(i2c_fd, I2C_FUNCS, &funcs) < 0)
     {
         //perror("ioctl(I2C_FUNCS) in i2c_master_write");
-				logger("ioctl(I2C_FUNCS) in i2c_master_write", strerror(errno));
+				logger("ioctl(I2C_FUNCS) in i2c_master_write_1()", strerror(errno));
     }
 
     assert(funcs & I2C_FUNC_I2C);
 
-    dputstr( DBG_I2C | DBG_INOUT, "i2c_master_write: ingress\n" );
+    dputstr( DBG_I2C | DBG_INOUT, "i2c_master_write_1(): ingress\n" );
 
     /* fill in the ws struct & the data buf */
     ws->outgoing_protocol = IPMI_CH_PROTOCOL_IPMB;
@@ -458,32 +448,43 @@ i2c_master_write_1( IPMI_WS *ws )
     msgs[0].addr = remote_i2c_address/2;
     msgs[0].flags = 0;
     msgs[0].len = ws->len_out;
-    if ((msgs[0].buf = (unsigned char *)malloc(ws->len_out+1)) == NULL)
+    /*if ((msgs[0].buf = (unsigned char *)malloc(ws->len_out+1)) == NULL)
 		{
 				logger("ERROR", "malloc() failed in i2c_master_write_1()");
 				exit(EXIT_FAILURE);
-		}
+		}*/
 
     for (i=0; i<=ws->len_out; i++) {
-        msgs[0].buf[i] = ws->pkt_out[i];
+        //msgs[0].buf[i] = ws->pkt_out[i];
+				outbuf[i] = ws->pkt_out[i];
     }
 
+		msgs[0].buf = outbuf;
+
     for (n=0; n<=ws->len_out; n++) {
-    		printf("data_sent_1 = %x\n\r", (unsigned int) msgs[0].buf[n]);
+    		//printf("data_sent_1 = %x\n\r", (unsigned int) msgs[0].buf[n]);
     }
 
     msgset[0].msgs = msgs;
     msgset[0].nmsgs = 1;
 
-    if (ioctl(i2c_fd_1, I2C_RDWR, &msgset) < 0)
+		ret = reg_read(devmem_ptr, set_MS);
+		ret |= 0x02;
+    reg_write(devmem_ptr, set_MS, ret);
+
+    if (ioctl(i2c_fd, I2C_RDWR, &msgset) < 0)
     {
-        perror("ioctl(I2C_RDWR) in i2c_master_write");
+				ret = reg_read(devmem_ptr, set_MS);
+				ret &= ~0x02;
+				reg_write(devmem_ptr, set_MS, ret);
+
+        perror("ioctl(I2C_RDWR) in i2c_master_write_1()");
 
 				//logger("i2c-xilinx master write error", strerror(errno));
 
 				//usleep(100000);
 
-				if (errno != EBUSY && errno != EAGAIN) {
+				/*if (errno != EBUSY && errno != EAGAIN) {
 						if (msgs[0].buf != NULL)
 						{
 								free(msgs[0].buf);
@@ -491,27 +492,48 @@ i2c_master_write_1( IPMI_WS *ws )
 						}
 
 						i2c_master_write_1( ws );
-				} else {
-						if (msgs[0].buf != NULL)
+				} else {*/
+						/*if (msgs[0].buf != NULL)
 						{
 								free(msgs[0].buf);
 								msgs[0].buf = NULL;
-						}
+						}*/
 
-						i2c_master_write_0( ws );
-				}
+						//i2c_master_write_0( ws );
+						return -1;
+				//}
     } else {
+				ret = reg_read(devmem_ptr, set_MS);
+				ret &= ~0x02;
+				reg_write(devmem_ptr, set_MS, ret);
+
 				if (ws->pkt_out[0] == 0x14 && ws->pkt_out[4] == 0x00) {
-				logger("Event message","Set Event Receiver(Events Rearming)");
+					logger("Event message","Set Event Receiver(Events Rearming)");
 				}
 				i2c_master_complete( (void *)ws, 0 );
 				//printf("i2c_msg_sent \n");
     }
 
-		if (msgs[0].buf != NULL)
+		/*if (msgs[0].buf != NULL)
 		{
 				free(msgs[0].buf);
 				msgs[0].buf = NULL;
+		}*/
+		return 0;
+}
+
+void
+i2c_master_write( IPMI_WS *ws ) {
+		int ret = -1;
+		int count;
+		for (count = 0; count < I2C_MASTER_COUNT; count++)
+		{
+				ret = i2c_master_write_0( ws );
+
+				if (ret < 0)
+				{
+						ret = i2c_master_write_1( ws );
+				}
 		}
 }
 

@@ -2856,8 +2856,8 @@ more information. */
 		sensor_scanning_enabled:1,
 		event_messages_enabled:1;
 #endif
-/* These bytes are optional:
-(Byte 4) For threshold-based sensors
+/* These bytes are optional:*/
+uchar	current_state_mask; /*(Byte 4) For threshold-based sensors
 Present threshold comparison status
 [7:6] - reserved. Returned as 1b. Ignore on read.
 [5] - 1b = at or above (=) upper non-recoverable threshold
@@ -7872,6 +7872,52 @@ typedef struct get_sensor_hysteresis_cmd_resp {
 	uchar	pos_going_threshold_hysteresis_value;
 	uchar	neg_going_threshold_hysteresis_value;
 } GET_SENSOR_HYSTERESIS_CMD_RESP;
+
+/*----------------------------------------------------------------------*/
+/*			Rearm Sensor Events command			*/
+/*----------------------------------------------------------------------*/
+
+typedef struct rearm_sensor_events_cmd_req {
+	uchar	command;
+	uchar	sensor_number;
+	/* Event Data 1 */
+#ifdef BF_MS_FIRST
+	uchar	rearm:1,
+				reserved:7;
+#else
+	uchar	reserved:7,
+				rearm:1;
+#endif
+} REARM_SENSOR_EVENTS_CMD_REQ;
+
+typedef struct rearm_sensor_events_cmd_resp {
+	uchar	completion_code;
+} REARM_SENSOR_EVENTS_CMD_RESP;
+
+/*----------------------------------------------------------------------*/
+/*			Get Sensor Event Status command			*/
+/*----------------------------------------------------------------------*/
+
+typedef struct get_sensor_event_status_cmd_req {
+	uchar	command;
+	uchar	sensor_number;
+} GET_SENSOR_EVENT_STATUS_CMD_REQ;
+
+typedef struct get_sensor_event_status_cmd_resp {
+	uchar	completion_code;
+#ifdef BF_MS_FIRST
+	uchar	event_messages_enabled:1,	/* 0b = All Event Messages disabled from this sensor */
+				sensor_scanning_enabled:1,	/* 0b = sensor scanning disabled */
+				unavailable:1,			/* 1b = reading/state unavailable */
+				reserved:5;
+#else
+	uchar	reserved:5,
+				unavailable:1,
+				sensor_scanning_enabled:1,
+				event_messages_enabled:1;
+#endif
+	uchar	current_state_mask;
+} GET_SENSOR_EVENT_STATUS_CMD_RESP;
 
 
 #define ATCA_CMD_GET_PICMG_PROPERTIES_STR		"Get PICMG Properties"

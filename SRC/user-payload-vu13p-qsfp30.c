@@ -30,8 +30,8 @@
 #include "toml.h"
 #include "sensor.h"
 #include "logger.h"
-#include "user-payload-octopus-qsfpdd.h"
-#include "user-sensor-octopus-qsfpdd.h"
+#include "user-payload-vu13p-qsfp30.h"
+#include "user-sensor-vu13p-qsfp30.h"
 #include "semaphore.h"
 #include <stdio.h>
 #include <stdint.h>
@@ -42,8 +42,15 @@
 #define PAYLOAD_OFF		0
 #define PAYLOAD_ON		1
 
-
 #define qbv_on_off              0x1220000
+
+extern long long int prototype;
+extern long long int polarity_bot;
+extern long long int polarity_top;
+extern long long int polarity_qsfp;
+extern long long int pok_en_bot;
+extern long long int pok_en_top;
+extern long long int pok_en_qsfp;
 
 extern unsigned long long int lbolt;
 extern FRU_CACHE fru_inventory_cache[];
@@ -56,49 +63,70 @@ static int power_up_done = 0;
 
 void user_module_payload_on( void )
 {
-	unsigned int payload_read;
-	power_up_done=0;
-	lock(2);
-	payload_read = reg_read(devmem_ptr, qbv_on_off);
-	payload_read |= 0x20;
-	reg_write(devmem_ptr, qbv_on_off, payload_read);
-	payload_timeout_init = lbolt;
-	//disable latches for both boards
-	while (i2c_write(i2c_fd_snsr[OCTOPUS_I2C_BUS],MACHXO2_ADDR,10,1)!=0)
-	  ;
-	i2c_write_octopus_bus(i2c_fd_snsr[OCTOPUS_I2C_BUS],OPTICAL_BUS,OPTICAL_ADDR, 8, 0x1,0);
-	//power them down
-	power_down_octopus(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
-	power_down_qsfpdd_module(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
-	//configure sensors
-	configure_octopus(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
-	configure_qsfpdd_module(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
-	//power_up
-	u8 octopus_on;
-	u8 optical_on;
-	octopus_on=power_up_octopus(i2c_fd_snsr[OCTOPUS_I2C_BUS],100);
-	optical_on=power_up_qsfpdd_module(i2c_fd_snsr[OCTOPUS_I2C_BUS],100);
-	power_up_done=octopus_on&optical_on;
-	if(!power_up_done) {
-	  power_down_octopus(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
-	  power_down_qsfpdd_module(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
+	unsigned int payload_rw;
+	unsigned int val_plrty_bot;
+	unsigned int val_plrty_top;
+	unsigned int val_plrty_qsfp;
+	unsigned int val_pok_en_bot;
+	unsigned int val_pok_en_top;
+	unsigned int val_pok_en_qsfp;
+
+	val_plrty_bot = (unsigned int) polarity_bot << 20;
+	val_plrty_top = (unsigned int) polarity_top << 21;
+	val_plrty_qsfp = (unsigned int) polarity_qsfp << 22;
+
+	val_pok_en_bot = (unsigned int) pok_en_bot << 23;
+	val_pok_en_top = (unsigned int) pok_en_top << 24;
+	val_pok_en_qsfp = (unsigned int) pok_en_qsfp << 25;
+
+	payload_rw = reg_read(devmem_ptr, qbv_on_off);
+	payload_rw |= (val_plrty_bot | val_plrty_top | val_plrty_qsfp | val_pok_en_bot | val_pok_en_top | val_pok_en_qsfp);
+	reg_write(devmem_ptr, qbv_on_off, payload_rw);
+
+	payload_rw = reg_read(devmem_ptr, qbv_on_off);
+  payload_rw |= 0x20;
+  reg_write(devmem_ptr, qbv_on_off, payload_rw);
+
+	if (prototype)
+	{
+		usleep(200000);
+
+		val_pok_en_bot = ((unsigned int) pok_en_bot | 0x1) << 23;
+		val_pok_en_top = ((unsigned int) pok_en_top | 0x1) << 24;
+		val_pok_en_qsfp = ((unsigned int) pok_en_qsfp | 0x1) << 25;
+
+		payload_rw = reg_read(devmem_ptr, qbv_on_off);
+		payload_rw |= (val_pok_en_bot | val_pok_en_top | val_pok_en_qsfp);
+		reg_write(devmem_ptr, qbv_on_off, payload_rw);
 	}
-	unlock(2);
+
+	payload_timeout_init = lbolt;
+	power_up_done = 1;
+	logger("PAYLOAD", "On");
 }
 
 void
 user_module_payload_off( void )
 {
-  lock(2);
-  unsigned int payload_read;
-  payload_read = reg_read(devmem_ptr, qbv_on_off);
-  payload_read &= ~0x20;
-  power_down_octopus(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
-  power_down_qsfpdd_module(i2c_fd_snsr[OCTOPUS_I2C_BUS]);
-  power_up_done = 0;
-  reg_write(devmem_ptr, qbv_on_off, payload_read);
+  unsigned int payload_rw;
+	unsigned int val_pok_en_bot;
+	unsigned int val_pok_en_top;
+	unsigned int val_pok_en_qsfp;
+
+	val_pok_en_bot = (unsigned int) pok_en_bot << 23;
+	val_pok_en_top = (unsigned int) pok_en_top << 24;
+	val_pok_en_qsfp = (unsigned int) pok_en_qsfp << 25;
+
+	payload_rw = reg_read(devmem_ptr, qbv_on_off);
+	payload_rw |= (val_pok_en_bot | val_pok_en_top | val_pok_en_qsfp);
+	reg_write(devmem_ptr, qbv_on_off, payload_rw);
+
+  payload_rw = reg_read(devmem_ptr, qbv_on_off);
+  payload_rw &= ~0x20;
+  reg_write(devmem_ptr, qbv_on_off, payload_rw);
+
+	power_up_done = 0;
   logger("PAYLOAD", "Off");
-  unlock(2);
 }
 
 void
