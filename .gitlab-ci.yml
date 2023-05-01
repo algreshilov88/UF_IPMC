@@ -1,0 +1,11 @@
+include:
+  - project: cms-tracker-phase2-onlinesw/herd-app
+    ref: v0.3.7
+    file: /ci/plugin-pipeline.yml
+
+
+variables:
+  BUILD_VARIANTS: centos8
+  CENTOS8_BUILD_PLATFORMS: linux/arm64
+  BASE_IMAGE_TAG: v0.3.7
+  PUBLISH_EOS_BASE_DIR: /eos/cms/store/group/upgrade/phase2_x2o/www/software/ipmc
