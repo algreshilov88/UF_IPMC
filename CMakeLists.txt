@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.17.5 FATAL_ERROR)
-project(IPMC_EXEC VERSION 0.3.0)
+project(uf-ipmc VERSION 0.3.0)
 
-#find_package(octopus 0.3.0 REQUIRED)
+find_package(x2o 0.3.0 REQUIRED)
+find_package(swatch 1.5.3 REQUIRED)
 
-configure_file(CONFIG/CONFIG.toml CONFIG.toml)
+configure_file(CONFIG/CONFIG.toml CONFIG/CONFIG.toml)
 configure_file(ipmc.service ipmc.service)
+
+set(BOARD "VU13P-QSFPDD")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -212,10 +215,18 @@ elseif(${BOARD} STREQUAL "VU13P-QSFP30-REV3")
            "SRC/user-payload-vu13p-qsfp30-rev3.h")
 endif()
 
-add_executable(${PROJECT_NAME} ${SRCS} ${HDRS})
+add_executable(IPMC_EXEC ${SRCS} ${HDRS})
+add_library(uf_ipmc SHARED ${SRCS} ${HDRS})
 
-#target_link_libraries(${PROJECT_NAME} PUBLIC octopus)
+#target_link_libraries(${PROJECT_NAME} PUBLIC x2o)
 
-install(TARGETS ${PROJECT_NAME} DESTINATION /usr/bin/)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/CONFIG.toml DESTINATION /usr/local/share/)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/CONFIG/CONFIG.toml DESTINATION /usr/local/share/)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ipmc.service DESTINATION /usr/lib/systemd/system/)
+
+include(${swatch_CMAKE_DIR}/../cactus-utilities.cmake)
+set(PLUGIN_CONFIG_FILE herd.yml)
+cactus_add_phase2_plugin_rules(
+    UF_IPMC
+    uf_ipmc
+    "Boost 1.53.0 REQUIRED COMPONENTS chrono filesystem regex thread unit_test_framework"
+)
