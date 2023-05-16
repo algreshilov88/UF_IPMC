@@ -1,0 +1,159 @@
+include:
+  - project: cms-cactus/core/swatch
+    ref: a9c09ba1
+    file: swatch/phase2/ci-image-build-templates.yml
+  - project: cms-cactus/ops/auto-devops
+    ref: 0.4.11
+    file: templates/all.yml
+
+
+# Run pipelines whenever branches and tags pushed
+# (but avoid duplicate pipelines when merge request open)
+workflow:
+  rules:
+    # Do not run MR pipelines - so that pipelines are not needlessly re-run
+    # for the same commit on a branch when the merge request is opened
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - when: always
+
+
+stages:
+  - build
+  - test
+  - publish
+
+
+variables:
+  BUILD_VARIANTS: centos8
+  CENTOS8_BUILD_ARCHS: arm64
+  CENTOS8_BUILD_PLATFORMS: linux/arm64
+  DOXYGEN_IMAGE: ${FORMAT_IMAGE}
+  FORMAT_IMAGE: ${BASE_IMAGE_REPO_URL}/centos8/herd-devel:${BASE_IMAGE_TAG}
+  YUM_REPO_ID: ${CI_PROJECT_NAME}
+  DOCKERFILE: ci/herd-app-with-plugin.Dockerfile
+  IMAGE_NAME: herd
+  BUILD_RPM_TARGET: export
+  BUILD_TARGETS: builder,development,production
+  CONTEXT_FOLDER: .
+  IMAGE_SUFFIXES: -build,-devel,
+  CMAKE_PROJECT_DIR: swatch
+  PUBLISH_EOS_BASE_DIR: /eos/cms/store/group/upgrade/phase2_x2o/www/software/ipmc
+  BASE_IMAGE_TAG: v0.3.7
+  BASE_IMAGE_REPO_URL: gitlab-registry.cern.ch/cms-tracker-phase2-onlinesw/herd-app
+  BUILD_ARG_1: BASE_IMAGE_REPO_URL=${BASE_IMAGE_REPO_URL}
+  BUILD_ARG_2: BASE_IMAGE_TAG=${BASE_IMAGE_TAG}
+  BUILD_ARG_3: PLUGIN_NAME=${CI_PROJECT_NAME}
+  #INCLUDE_FORMAT_JOB: 1
+  #INCLUDE_DOXYGEN_JOB: 1
+
+
+docker:prep:
+  stage: .pre
+  image: gitlab-registry.cern.ch/cms-tracker-phase2-onlinesw/herd-app/centos7/herd-devel:${BASE_IMAGE_TAG}
+  script:
+    - mkdir -p ci
+    - cp /tmp/herd-app-with-plugin.Dockerfile ci/herd-app-with-plugin.Dockerfile
+    - if [ -n "${COPY_INSTALL_PATHS}" ]; then for INSTALL_PATH in ${COPY_INSTALL_PATHS}; do echo INSTALL_PATH=${INSTALL_PATH}; sed -i '/# CUSTOM COPY STATEMENTS.*/a COPY --from=builder '${INSTALL_PATH}' '${INSTALL_PATH} ci/herd-app-with-plugin.Dockerfile ; done; fi
+    - cat ci/herd-app-with-plugin.Dockerfile
+  artifacts:
+    paths:
+      - ci/
+
+
+build:centos8:arm64:
+  needs:
+    - docker:prep
+  extends: .image_build_kaniko_native_arm64
+  variables:
+    BUILD_VARIANT: centos8
+    YUMREPO_VARIANT: el8
+  rules:
+    - if: '$BUILD_VARIANTS =~ /.*centos8.*/ && $CENTOS8_BUILD_ARCHS =~ /.*arm64.*/'
+      when: on_success
+    - when: never
+
+
+manifest:centos8:
+  extends: .image_manifest_crane
+  variables:
+    BUILD_VARIANT: centos8
+    BUILD_ARCHS: ${CENTOS8_BUILD_ARCHS}
+  needs:
+    - job: build:centos8:arm64
+      optional: true
+  rules:
+    - if: '$BUILD_VARIANTS =~ /.*centos8.*/'
+      when: on_success
+    - when: never
+
+
+yum_repo:create:
+  stage: publish
+  image: gitlab-registry.cern.ch/cms-cactus/phase2/software/docker/centos8/base-devel:master-bb7f577b
+  script:
+    - mkdir ci_products
+    - mv -v rpms ci_products/repos
+    # Create YUM repo for each OS & arch
+    - >
+      for subDir in ci_products/repos/*/*; do
+      echo "Creating YUM repo in $subDir" &&
+      cd ${CI_PROJECT_DIR}/$subDir &&
+      createrepo -v .;
+      done
+    # Create the .repo file (for convenience)
+    - cd ${CI_PROJECT_DIR}
+    - echo PUBLISH_EOS_BASE_URL=${PUBLISH_EOS_BASE_URL:=$(echo ${PUBLISH_EOS_BASE_DIR} | sed 's|/eos/cms/store/group/upgrade/phase2_x2o/www/software/ipmc|https://cms-x2o.web.cern.ch/software/ipmc|g')}
+    - echo -e "[${YUM_REPO_ID}]\nname=${YUM_REPO_ID} repository (${CI_COMMIT_TAG:-branch ${CI_COMMIT_REF_NAME}, commit ${CI_COMMIT_SHORT_SHA}})\nbaseurl=${PUBLISH_EOS_BASE_URL}/${PUBLISH_EOS_SUBDIR}/repos/centos\$releasever/\$basearch\nenabled=1\ngpgcheck=0" > ci_products/${YUM_REPO_ID}.repo
+    - cat ci_products/${YUM_REPO_ID}.repo
+    - "echo -e \"A .repo file for this YUM repository can be downloaded as follows (after 'yum_repo:publish' job finishes):\nsudo yum-config-manager --add-repo ${PUBLISH_EOS_BASE_URL}/${PUBLISH_EOS_SUBDIR}/${YUM_REPO_ID}.repo\""
+  needs:
+    - job: build:centos8:arm64
+      optional: true
+      artifacts: true
+  artifacts:
+    paths:
+      - ci_products
+  rules:
+    - if: $CI_COMMIT_TAG
+      variables:
+        PUBLISH_EOS_SUBDIR: release/${CI_COMMIT_TAG}
+    - variables:
+        PUBLISH_EOS_SUBDIR: branches/${CI_COMMIT_REF_SLUG}/${CI_COMMIT_SHORT_SHA}
+
+
+yum_repo:publish:
+  stage: publish
+  extends: .auto_devops_upload_eos_template
+  variables:
+    LOCAL_FOLDER: ci_products
+  rules:
+    - if: $CI_COMMIT_TAG
+      variables:
+        CERNBOX_FOLDER: ${PUBLISH_EOS_BASE_DIR}/release/${CI_COMMIT_TAG}
+    - if: $PUBLISH_EOS_BASE_DIR
+      variables:
+        CERNBOX_FOLDER: ${PUBLISH_EOS_BASE_DIR}/branches/${CI_COMMIT_REF_SLUG}/${CI_COMMIT_SHORT_SHA}
+    # If PUBLISH_EOS_BASE_DIR not defined, then this job will not be included in the pipeline
+  needs:
+    - yum_repo:create
+
+
+format:
+  stage: test
+  image: ${FORMAT_IMAGE}
+  before_script:
+    - if [ -z ${CMAKE_PROJECT_DIR} ]; then export CMAKE_PROJECT_DIR=${CI_PROJECT_DIR}; fi
+    - echo CMAKE_PROJECT_DIR=${CMAKE_PROJECT_DIR}
+  script:
+    - cd ${CMAKE_PROJECT_DIR}
+    - mkdir build
+    - cd build
+    - cmake ..
+    - make format
+    - git diff --exit-code
+  needs: []
+  rules:
+    - if: '$INCLUDE_FORMAT_JOB == "1"'
+      when: always
+    - when: never
